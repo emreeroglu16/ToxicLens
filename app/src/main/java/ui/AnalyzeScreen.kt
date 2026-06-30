@@ -1,14 +1,24 @@
 package com.toxiclens.app.ui
 
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -16,6 +26,27 @@ import androidx.compose.ui.unit.dp
 fun AnalyzeScreen(
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+    }
+
+    val selectedBitmap = selectedImageUri?.let { uri ->
+        remember(uri) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val source = ImageDecoder.createSource(context.contentResolver, uri)
+                ImageDecoder.decodeBitmap(source)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -37,7 +68,7 @@ fun AnalyzeScreen(
                 Text("← Back", color = Color(0xFFC9CCE8))
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = "Analyze Screenshot",
@@ -54,7 +85,7 @@ fun AnalyzeScreen(
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -66,28 +97,64 @@ fun AnalyzeScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(28.dp),
+                        .padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "📷",
-                        style = MaterialTheme.typography.displayMedium
-                    )
+                    if (selectedBitmap == null) {
+                        Text(
+                            text = "▣",
+                            color = Color(0xFFE56BFF),
+                            style = MaterialTheme.typography.displayMedium
+                        )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        text = "No screenshot selected yet",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                        Text(
+                            text = "No screenshot selected yet",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = "Gallery selection will be added in the next step.",
-                        color = Color(0xFFC9CCE8)
-                    )
+                        Text(
+                            text = "Choose an image from your gallery.",
+                            color = Color(0xFFC9CCE8)
+                        )
+                    } else {
+                        Image(
+                            bitmap = selectedBitmap.asImageBitmap(),
+                            contentDescription = "Selected screenshot",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(360.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = {
+                            imagePickerLauncher.launch("image/*")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Select Screenshot")
+                    }
+
+                    if (selectedBitmap != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = {
+                                // AI analiz işlemi sonraki adımda eklenecek
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Analyze")
+                        }
+                    }
                 }
             }
         }

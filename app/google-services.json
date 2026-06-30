@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "151643418166",
+    "project_id": "read-between",
+    "storage_bucket": "read-between.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:151643418166:android:e26fef4e318f3e668bb297",
+        "android_client_info": {
+          "package_name": "com.toxiclens.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaz1hb0X8DFTVvqHZVESXgZz7HhRflUls"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
