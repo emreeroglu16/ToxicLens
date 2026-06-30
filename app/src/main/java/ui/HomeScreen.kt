@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onAnalyzeClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -90,6 +92,7 @@ fun HomeScreen() {
             Spacer(Modifier.height(30.dp))
 
             FeatureCard(
+                onClick = onAnalyzeClick,
                 icon = "▣",
                 title = "Analyze Screenshot",
                 badge = "AI Powered",
@@ -179,6 +182,7 @@ fun AppLogo() {
 
 @Composable
 fun FeatureCard(
+    onClick: () -> Unit = {},
     icon: String,
     title: String,
     badge: String,
@@ -187,7 +191,10 @@ fun FeatureCard(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, label = "cardScale")
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        label = "cardScale"
+    )
 
     Card(
         modifier = Modifier
@@ -197,10 +204,14 @@ fun FeatureCard(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
-            ) {},
+            ) {
+                onClick()
+            },
         shape = RoundedCornerShape(28.dp),
         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF151A35))
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF151A35)
+        )
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -209,7 +220,10 @@ fun FeatureCard(
             Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .background(accentColor.copy(alpha = 0.20f), RoundedCornerShape(20.dp)),
+                    .background(
+                        accentColor.copy(alpha = 0.20f),
+                        RoundedCornerShape(20.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -232,7 +246,10 @@ fun FeatureCard(
 
                 Spacer(Modifier.height(6.dp))
 
-                BadgePill(text = badge, color = accentColor)
+                BadgePill(
+                    text = badge,
+                    color = accentColor
+                )
 
                 Spacer(Modifier.height(8.dp))
 
@@ -253,10 +270,16 @@ fun FeatureCard(
 }
 
 @Composable
-fun BadgePill(text: String, color: Color) {
+fun BadgePill(
+    text: String,
+    color: Color
+) {
     Box(
         modifier = Modifier
-            .background(color.copy(alpha = 0.16f), RoundedCornerShape(50.dp))
+            .background(
+                color.copy(alpha = 0.16f),
+                RoundedCornerShape(50.dp)
+            )
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
@@ -281,7 +304,9 @@ fun SmallCard(
         modifier = modifier.height(138.dp),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.30f)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF151A35))
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF151A35)
+        )
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -290,7 +315,10 @@ fun SmallCard(
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .background(accentColor.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
+                    .background(
+                        accentColor.copy(alpha = 0.18f),
+                        RoundedCornerShape(14.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -325,7 +353,9 @@ fun PrivacyCard() {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, Color(0xFF9B5CFF).copy(alpha = 0.30f)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF11162D))
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11162D)
+        )
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -334,7 +364,10 @@ fun PrivacyCard() {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Color(0xFF9B5CFF).copy(alpha = 0.16f), RoundedCornerShape(16.dp)),
+                    .background(
+                        Color(0xFF9B5CFF).copy(alpha = 0.16f),
+                        RoundedCornerShape(16.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
