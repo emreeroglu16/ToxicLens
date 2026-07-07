@@ -1,13 +1,21 @@
 package com.toxiclens.app.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -16,53 +24,102 @@ fun ResultScreen(
     result: String,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    val score = extractSection(result, "RELATIONSHIP_SCORE").ifBlank { "0" }
+    val toxicity = extractSection(result, "TOXICITY_LEVEL").ifBlank { "Belirsiz" }
+    val emotion = extractSection(result, "EMOTIONAL_TONE").ifBlank { "Belirlenemedi." }
+    val intent = extractSection(result, "HIDDEN_INTENT").ifBlank { "Belirgin bir gizli niyet tespit edilemedi." }
+    val greenFlags = extractSection(result, "GREEN_FLAGS").ifBlank { "Belirgin olumlu işaret yok." }
+    val redFlags = extractSection(result, "RED_FLAGS").ifBlank { "Belirgin kırmızı bayrak yok." }
+    val summary = extractSection(result, "SUMMARY").ifBlank { "Özet çıkarılamadı." }
+    val suggestedReply = extractSection(result, "SUGGESTED_REPLY").ifBlank { "Cevap önerisi oluşturulamadı." }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF7F7FB))
-            .padding(20.dp)
             .verticalScroll(rememberScrollState())
+            .padding(20.dp)
     ) {
         TextButton(onClick = onBack) {
             Text("← Back")
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Read Between Report",
-            color = Color.Black,
+            text = "🧠 Analysis Complete",
+            color = Color(0xFF151525),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.headlineMedium
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "Conversation analyzed successfully.",
+            color = Color(0xFF666A7A),
+            style = MaterialTheme.typography.bodyMedium
+        )
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
-            ) {
-                Text(
-                    text = "AI Analysis",
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge
-                )
+        Spacer(modifier = Modifier.height(22.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
+        ScoreCard(scoreText = score)
 
-                Text(
-                    text = result,
-                    color = Color(0xFF222222),
-                    style = MaterialTheme.typography.bodyLarge
+        Spacer(modifier = Modifier.height(14.dp))
+
+        ResultCard(
+            title = "☣ Toxicity Level",
+            content = toxicity,
+            containerColor = Color.White
+        )
+
+        ResultCard(
+            title = "😊 Emotional Tone",
+            content = emotion,
+            containerColor = Color.White
+        )
+
+        ResultCard(
+            title = "🧠 Hidden Intent",
+            content = intent,
+            containerColor = Color.White
+        )
+
+        ResultCard(
+            title = "💚 Green Flags",
+            content = greenFlags,
+            containerColor = Color(0xFFEFFBF4)
+        )
+
+        ResultCard(
+            title = "🚩 Red Flags",
+            content = redFlags,
+            containerColor = Color(0xFFFFF1F3)
+        )
+
+        ResultCard(
+            title = "📝 Summary",
+            content = summary,
+            containerColor = Color.White
+        )
+
+        SuggestedReplyCard(
+            reply = suggestedReply,
+            onCopy = {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(
+                    ClipData.newPlainText("Suggested Reply", suggestedReply)
                 )
             }
-        }
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Text(
+            text = "ℹ️ This AI analysis is based only on the screenshots you provided. It should be treated as a helpful suggestion, not a factual judgment.",
+            color = Color(0xFF777A88),
+            style = MaterialTheme.typography.bodySmall
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -73,4 +130,168 @@ fun ResultScreen(
             Text("Back to Analysis")
         }
     }
+}
+
+@Composable
+fun ScoreCard(scoreText: String) {
+    val score = scoreText.filter { it.isDigit() }.toIntOrNull() ?: 0
+    val progress = (score.coerceIn(0, 100)) / 100f
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF151A35)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "❤️ Relationship Score",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "$score",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.displayLarge
+            )
+
+            Text(
+                text = "/100",
+                color = Color(0xFFC9CCE8),
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(50.dp)),
+                color = Color(0xFFE56BFF),
+                trackColor = Color(0xFF303655)
+            )
+        }
+    }
+}
+
+@Composable
+fun ResultCard(
+    title: String,
+    content: String,
+    containerColor: Color
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 14.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
+            Text(
+                text = title,
+                color = Color(0xFF151525),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = content,
+                color = Color(0xFF303040),
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+}
+
+@Composable
+fun SuggestedReplyCard(
+    reply: String,
+    onCopy: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 14.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFEFEFFF)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
+            Text(
+                text = "💬 Suggested Reply",
+                color = Color(0xFF151525),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = reply,
+                color = Color(0xFF303040),
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = onCopy,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("📋 Copy Reply")
+            }
+        }
+    }
+}
+
+fun extractSection(
+    text: String,
+    sectionName: String
+): String {
+    val sectionStart = "$sectionName:"
+    val startIndex = text.indexOf(sectionStart)
+
+    if (startIndex == -1) return ""
+
+    val contentStart = startIndex + sectionStart.length
+
+    val nextSections = listOf(
+        "RELATIONSHIP_SCORE:",
+        "TOXICITY_LEVEL:",
+        "EMOTIONAL_TONE:",
+        "HIDDEN_INTENT:",
+        "GREEN_FLAGS:",
+        "RED_FLAGS:",
+        "SUMMARY:",
+        "SUGGESTED_REPLY:"
+    )
+
+    val nextIndex = nextSections
+        .filter { it != sectionStart }
+        .map { text.indexOf(it, contentStart) }
+        .filter { it != -1 }
+        .minOrNull() ?: text.length
+
+    return text.substring(contentStart, nextIndex).trim()
 }

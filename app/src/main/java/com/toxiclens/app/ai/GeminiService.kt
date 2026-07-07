@@ -13,44 +13,58 @@ class GeminiService {
         modelName = "gemini-2.5-flash"
     )
 
-    suspend fun analyze(bitmap: Bitmap): String {
+    suspend fun analyze(bitmaps: List<Bitmap>): String {
         return try {
             val prompt = """
 Sen Read Between uygulamasının iletişim analiz motorusun.
 
-Bu ekran görüntüsündeki konuşmayı analiz et.
-
+Bu görseller aynı konuşmanın devam eden ekran görüntüleridir.
+Görselleri sırayla değerlendir.
 Cevabı Türkçe ver.
-
 Çok kısa, net ve kullanıcı dostu yaz.
 
 Aşağıdaki formatı aynen kullan:
 
-İlişki Skoru: 0-100 arası puan
+RELATIONSHIP_SCORE:
+0-100 arası tek bir puan yaz.
 
-Duygusal Ton: En fazla 1 cümle
+TOXICITY_LEVEL:
+Düşük / Orta / Yüksek
 
-Gizli Niyet: En fazla 1 cümle
+EMOTIONAL_TONE:
+Konuşmanın baskın duygusal tonunu en fazla 1 cümleyle yaz.
 
-Manipülasyon Riski: Düşük / Orta / Yüksek
+HIDDEN_INTENT:
+Varsa gizli niyeti en fazla 1 cümleyle açıkla. Emin değilsen "Net değil" yaz.
 
-Kırmızı Bayraklar: En fazla 1 cümle
+GREEN_FLAGS:
+Olumlu işaretleri kısa maddeler halinde yaz. Yoksa "Belirgin olumlu işaret yok" yaz.
 
-Özet: En fazla 2 cümle
+RED_FLAGS:
+Uyarı işaretlerini kısa maddeler halinde yaz. Yoksa "Belirgin kırmızı bayrak yok" yaz.
 
-Tavsiye: En fazla 1 cümle
+SUMMARY:
+Konuşmanın genel özetini en fazla 2 cümleyle yaz.
+
+SUGGESTED_REPLY:
+Kullanıcının gönderebileceği doğal ve kısa bir cevap öner.
 
 Kurallar:
 - Uzun paragraf yazma.
 - Gereksiz detay verme.
 - Kesin psikolojik teşhis koyma.
-- Sadece ekrandaki konuşmaya göre yorum yap.
+- Kişilere hakaret etme.
+- Tehlikeli veya kesin varsayımlar yapma.
+- Sadece ekrandaki konuşmalara göre yorum yap.
+- Görsellerin sırasını konuşmanın akışı olarak kabul et.
 - Eğer konuşma net okunamıyorsa bunu açıkça belirt.
 """.trimIndent()
 
             val response = model.generateContent(
                 content {
-                    image(bitmap)
+                    bitmaps.forEach { bitmap ->
+                        image(bitmap)
+                    }
                     text(prompt)
                 }
             )

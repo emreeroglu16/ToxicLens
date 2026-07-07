@@ -1,5 +1,6 @@
 package com.toxiclens.app.ui
 
+import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -35,24 +36,25 @@ fun AnalyzeScreen(
     val scope = rememberCoroutineScope()
     val geminiService = remember { GeminiService() }
 
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val isPremiumUser = false
+    val screenshotLimit = if (isPremiumUser) 20 else 2
+
+    var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var isAnalyzing by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        selectedImageUri = uri
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        selectedImageUris = uris.take(screenshotLimit)
     }
 
-    val selectedBitmap = selectedImageUri?.let { uri ->
-        remember(uri) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val source = ImageDecoder.createSource(context.contentResolver, uri)
-                ImageDecoder.decodeBitmap(source)
-            } else {
-                @Suppress("DEPRECATION")
-                MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-            }
+    fun uriToBitmap(uri: Uri): Bitmap {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val source = ImageDecoder.createSource(context.contentResolver, uri)
+            ImageDecoder.decodeBitmap(source)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
         }
     }
 
@@ -82,7 +84,7 @@ fun AnalyzeScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Analyze Screenshot",
+                text = "Conversation Screenshots",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold
@@ -91,94 +93,106 @@ fun AnalyzeScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Select a screenshot and let Read Between analyze the emotional tone, hidden intentions and red flags.",
+                text = "Select screenshots from the same conversation in the correct order.",
                 color = Color(0xFFC9CCE8),
                 style = MaterialTheme.typography.bodyLarge
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            Button(
+                onClick = {
+                    imagePickerLauncher.launch("image/*")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("+ Add Screenshots")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color(0xFF151A35)
                 )
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(22.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.padding(20.dp)
                 ) {
-                    if (selectedBitmap == null) {
-                        Text(
-                            text = "▣",
-                            color = Color(0xFFE56BFF),
-                            style = MaterialTheme.typography.displayMedium
-                        )
+                    Text(
+                        text = "Selected",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = "No screenshot selected yet",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Text(
+                        text = "${selectedImageUris.size} / $screenshotLimit screenshots - ${if (isPremiumUser) "Premium Plan" else "Free Plan"}",
+                        color = Color(0xFFC9CCE8)
+                    )
 
+                    if (!isPremiumUser && selectedImageUris.size >= screenshotLimit) {
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "Choose an image from your gallery.",
-                            color = Color(0xFFC9CCE8)
+                            text = "Free limit reached. Premium will allow up to 20 screenshots.",
+                            color = Color(0xFFE56BFF),
+                            style = MaterialTheme.typography.bodySmall
                         )
-                    } else {
-                        Image(
-                            bitmap = selectedBitmap.asImageBitmap(),
-                            contentDescription = "Selected screenshot",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(360.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Button(
-                        onClick = {
-                            imagePickerLauncher.launch("image/*")
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Select Screenshot")
-                    }
-
-                    if (selectedBitmap != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Button(
-                            onClick = {
-                                val bitmap = selectedBitmap
-
-                                scope.launch {
-                                    isAnalyzing = true
-
-                                    val result = geminiService.analyze(bitmap)
-
-                                    isAnalyzing = false
-
-                                    onAnalysisComplete(result)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isAnalyzing
-                        ) {
-                            Text("Analyze")
-                        }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (selectedImageUris.isEmpty()) {
+                EmptyScreenshotCard()
+            } else {
+                selectedImageUris.forEachIndexed { index, uri ->
+                    ScreenshotPreviewCard(
+                        index = index + 1,
+                        uri = uri,
+                        onRemove = {
+                            selectedImageUris = selectedImageUris.filterIndexed { i, _ ->
+                                i != index
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    scope.launch {
+                        isAnalyzing = true
+
+                        val bitmaps = selectedImageUris.map { uri ->
+                            uriToBitmap(uri)
+                        }
+
+                        val result = geminiService.analyze(bitmaps)
+
+                        isAnalyzing = false
+
+                        onAnalysisComplete(result)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = selectedImageUris.isNotEmpty() && !isAnalyzing
+            ) {
+                Text("Analyze Conversation")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            PremiumCard()
 
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -217,13 +231,158 @@ fun AnalyzeScreen(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Gemini ekran görüntüsünü inceliyor.",
+                            text = "Gemini seçilen görselleri inceliyor.",
                             color = Color(0xFFC9CCE8),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun EmptyScreenshotCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF151A35)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "▣",
+                color = Color(0xFFE56BFF),
+                style = MaterialTheme.typography.displayMedium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "No screenshots selected yet",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Choose up to 2 screenshots for free.",
+                color = Color(0xFFC9CCE8)
+            )
+        }
+    }
+}
+
+@Composable
+fun ScreenshotPreviewCard(
+    index: Int,
+    uri: Uri,
+    onRemove: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val bitmap = remember(uri) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val source = ImageDecoder.createSource(context.contentResolver, uri)
+            ImageDecoder.decodeBitmap(source)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF151A35)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$index",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .background(Color(0xFF7A3CFF), RoundedCornerShape(50.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Screenshot $index",
+                modifier = Modifier
+                    .width(90.dp)
+                    .height(110.dp),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Screenshot $index",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "✓ Ready",
+                    color = Color(0xFF37D67A),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            TextButton(onClick = onRemove) {
+                Text("Remove", color = Color(0xFFFF5C7A))
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF11162D)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            Text(
+                text = "⭐ Premium",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Analyze up to 20 screenshots, get detailed reports, history and PDF export.",
+                color = Color(0xFFC9CCE8),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
