@@ -13,13 +13,20 @@ class GeminiService {
         modelName = "gemini-2.5-flash"
     )
 
-    suspend fun analyze(bitmaps: List<Bitmap>): String {
+    suspend fun analyze(
+        bitmaps: List<Bitmap>,
+        conversationType: String
+    ): String {
         return try {
             val prompt = """
 Sen Read Between uygulamasının iletişim analiz motorusun.
 
+Conversation Type:
+$conversationType
+
 Bu görseller aynı konuşmanın devam eden ekran görüntüleridir.
 Görselleri sırayla değerlendir.
+Analizi seçilen konuşma türüne göre yap.
 Cevabı Türkçe ver.
 Çok kısa, net ve kullanıcı dostu yaz.
 
@@ -35,7 +42,7 @@ EMOTIONAL_TONE:
 Konuşmanın baskın duygusal tonunu en fazla 1 cümleyle yaz.
 
 HIDDEN_INTENT:
-Varsa gizli niyeti en fazla 1 cümleyle açıkla. Emin değilsen "Net değil" yaz.
+Varsa gizli niyeti en fazla 1 cümleyle açıkla. Yeterli kanıt yoksa "Belirgin bir gizli niyet tespit edilemedi." yaz.
 
 GREEN_FLAGS:
 Olumlu işaretleri kısa maddeler halinde yaz. Yoksa "Belirgin olumlu işaret yok" yaz.
@@ -51,10 +58,8 @@ Kullanıcının gönderebileceği doğal ve kısa bir cevap öner.
 
 Kurallar:
 - Uzun paragraf yazma.
-- Gereksiz detay verme.
 - Kesin psikolojik teşhis koyma.
 - Kişilere hakaret etme.
-- Tehlikeli veya kesin varsayımlar yapma.
 - Sadece ekrandaki konuşmalara göre yorum yap.
 - Görsellerin sırasını konuşmanın akışı olarak kabul et.
 - Eğer konuşma net okunamıyorsa bunu açıkça belirt.

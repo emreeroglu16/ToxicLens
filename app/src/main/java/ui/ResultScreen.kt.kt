@@ -10,14 +10,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 @Composable
 fun ResultScreen(
@@ -25,6 +26,8 @@ fun ResultScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val snackbarHostState = SnackbarHostState()
+    val scope = rememberCoroutineScope()
 
     val score = extractSection(result, "RELATIONSHIP_SCORE").ifBlank { "0" }
     val toxicity = extractSection(result, "TOXICITY_LEVEL").ifBlank { "Belirsiz" }
@@ -35,107 +38,98 @@ fun ResultScreen(
     val summary = extractSection(result, "SUMMARY").ifBlank { "Özet çıkarılamadı." }
     val suggestedReply = extractSection(result, "SUGGESTED_REPLY").ifBlank { "Cevap önerisi oluşturulamadı." }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F7FB))
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp)
-    ) {
-        TextButton(onClick = onBack) {
-            Text("← Back")
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = "🧠 Analysis Complete",
-            color = Color(0xFF151525),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Text(
-            text = "Conversation analyzed successfully.",
-            color = Color(0xFF666A7A),
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(modifier = Modifier.height(22.dp))
-
-        ScoreCard(scoreText = score)
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        ResultCard(
-            title = "☣ Toxicity Level",
-            content = toxicity,
-            containerColor = Color.White
-        )
-
-        ResultCard(
-            title = "😊 Emotional Tone",
-            content = emotion,
-            containerColor = Color.White
-        )
-
-        ResultCard(
-            title = "🧠 Hidden Intent",
-            content = intent,
-            containerColor = Color.White
-        )
-
-        ResultCard(
-            title = "💚 Green Flags",
-            content = greenFlags,
-            containerColor = Color(0xFFEFFBF4)
-        )
-
-        ResultCard(
-            title = "🚩 Red Flags",
-            content = redFlags,
-            containerColor = Color(0xFFFFF1F3)
-        )
-
-        ResultCard(
-            title = "📝 Summary",
-            content = summary,
-            containerColor = Color.White
-        )
-
-        SuggestedReplyCard(
-            reply = suggestedReply,
-            onCopy = {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(
-                    ClipData.newPlainText("Suggested Reply", suggestedReply)
-                )
-            }
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Text(
-            text = "ℹ️ This AI analysis is based only on the screenshots you provided. It should be treated as a helpful suggestion, not a factual judgment.",
-            color = Color(0xFF777A88),
-            style = MaterialTheme.typography.bodySmall
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth()
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color(0xFFF7F7FB)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF7F7FB))
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
         ) {
-            Text("Back to Analysis")
+            TextButton(onClick = onBack) {
+                Text("← Back", color = Color(0xFF6F50B5))
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "🧠 Analysis Complete",
+                color = Color(0xFF151525),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Text(
+                text = "Conversation analyzed successfully.",
+                color = Color(0xFF666A7A),
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            ScoreCard(scoreText = score)
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            ToxicityCard(toxicity)
+
+            ResultCard("😊 Emotional Tone", emotion, Color.White)
+            ResultCard("🧠 Hidden Intent", cleanIntent(intent), Color.White)
+            ResultCard("💚 Green Flags", formatFlags(greenFlags, "✅"), Color(0xFFEFFBF4))
+            ResultCard("🚩 Red Flags", formatFlags(redFlags, "⚠️"), Color(0xFFFFF1F3))
+            ResultCard("📝 Summary", summary, Color.White)
+
+            SuggestedReplyCard(
+                reply = suggestedReply,
+                onCopy = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText("Suggested Reply", suggestedReply)
+                    )
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Reply copied")
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "ℹ️ This AI analysis is based only on the screenshots you provided. It should be treated as a helpful suggestion, not a factual judgment.",
+                color = Color(0xFF777A88),
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF6F50B5)
+                )
+            ) {
+                Text("Back to Analysis")
+            }
         }
     }
 }
 
 @Composable
 fun ScoreCard(scoreText: String) {
-    val score = scoreText.filter { it.isDigit() }.toIntOrNull() ?: 0
-    val progress = (score.coerceIn(0, 100)) / 100f
+    val score = scoreText.filter { it.isDigit() }.toIntOrNull()?.coerceIn(0, 100) ?: 0
+    val progress = score / 100f
+
+    val label = when {
+        score >= 75 -> "Strong"
+        score >= 50 -> "Moderate"
+        score >= 25 -> "Needs Attention"
+        else -> "Risky"
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -170,7 +164,16 @@ fun ScoreCard(scoreText: String) {
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = label,
+                color = Color(0xFFE56BFF),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             LinearProgressIndicator(
                 progress = { progress },
@@ -186,6 +189,56 @@ fun ScoreCard(scoreText: String) {
 }
 
 @Composable
+fun ToxicityCard(toxicity: String) {
+    val clean = toxicity.trim()
+
+    val badgeColor = when {
+        clean.contains("yüksek", ignoreCase = true) -> Color(0xFFFFD6DC)
+        clean.contains("orta", ignoreCase = true) -> Color(0xFFFFF0C2)
+        clean.contains("düşük", ignoreCase = true) -> Color(0xFFDFF8EA)
+        else -> Color(0xFFEDEDF5)
+    }
+
+    val badgeText = when {
+        clean.contains("yüksek", ignoreCase = true) -> "🔴 YÜKSEK"
+        clean.contains("orta", ignoreCase = true) -> "🟡 ORTA"
+        clean.contains("düşük", ignoreCase = true) -> "🟢 DÜŞÜK"
+        else -> clean.uppercase()
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 14.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = "☣ Toxicity Level",
+                color = Color(0xFF151525),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Surface(
+                color = badgeColor,
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text(
+                    text = badgeText,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = Color(0xFF202030),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ResultCard(
     title: String,
     content: String,
@@ -196,13 +249,9 @@ fun ResultCard(
             .fillMaxWidth()
             .padding(bottom = 14.dp),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        )
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp)
-        ) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Text(
                 text = title,
                 color = Color(0xFF151525),
@@ -235,9 +284,7 @@ fun SuggestedReplyCard(
             containerColor = Color(0xFFEFEFFF)
         )
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp)
-        ) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Text(
                 text = "💬 Suggested Reply",
                 color = Color(0xFF151525),
@@ -257,7 +304,10 @@ fun SuggestedReplyCard(
 
             Button(
                 onClick = onCopy,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF6F50B5)
+                )
             ) {
                 Text("📋 Copy Reply")
             }
@@ -294,4 +344,35 @@ fun extractSection(
         .minOrNull() ?: text.length
 
     return text.substring(contentStart, nextIndex).trim()
+}
+
+fun formatFlags(text: String, icon: String): String {
+    return text
+        .lines()
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .joinToString("\n") { line ->
+            val cleanLine = line
+                .removePrefix("*")
+                .removePrefix("-")
+                .removePrefix("•")
+                .trim()
+
+            if (
+                cleanLine.contains("yok", ignoreCase = true) ||
+                cleanLine.contains("belirgin", ignoreCase = true).not()
+            ) {
+                "$icon $cleanLine"
+            } else {
+                cleanLine
+            }
+        }
+}
+
+fun cleanIntent(text: String): String {
+    return if (text.contains("net değil", ignoreCase = true)) {
+        "Belirgin bir gizli niyet tespit edilemedi."
+    } else {
+        text
+    }
 }

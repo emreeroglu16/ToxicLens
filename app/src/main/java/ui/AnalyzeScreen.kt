@@ -1,6 +1,5 @@
 package com.toxiclens.app.ui
 
-import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -24,38 +23,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.toxiclens.app.ai.GeminiService
-import kotlinx.coroutines.launch
 
 @Composable
 fun AnalyzeScreen(
     onBack: () -> Unit,
-    onAnalysisComplete: (String) -> Unit
+    onImagesSelected: (List<Uri>) -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val geminiService = remember { GeminiService() }
-
     val isPremiumUser = false
     val screenshotLimit = if (isPremiumUser) 20 else 2
 
     var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    var isAnalyzing by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris: List<Uri> ->
         selectedImageUris = uris.take(screenshotLimit)
-    }
-
-    fun uriToBitmap(uri: Uri): Bitmap {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val source = ImageDecoder.createSource(context.contentResolver, uri)
-            ImageDecoder.decodeBitmap(source)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-        }
     }
 
     Box(
@@ -170,24 +152,12 @@ fun AnalyzeScreen(
 
             Button(
                 onClick = {
-                    scope.launch {
-                        isAnalyzing = true
-
-                        val bitmaps = selectedImageUris.map { uri ->
-                            uriToBitmap(uri)
-                        }
-
-                        val result = geminiService.analyze(bitmaps)
-
-                        isAnalyzing = false
-
-                        onAnalysisComplete(result)
-                    }
+                    onImagesSelected(selectedImageUris)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = selectedImageUris.isNotEmpty() && !isAnalyzing
+                enabled = selectedImageUris.isNotEmpty()
             ) {
-                Text("Analyze Conversation")
+                Text("Continue")
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -195,49 +165,6 @@ fun AnalyzeScreen(
             PremiumCard()
 
             Spacer(modifier = Modifier.height(32.dp))
-        }
-
-        if (isAnalyzing) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.62f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF151A35)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(
-                            color = Color(0xFFE56BFF),
-                            modifier = Modifier.size(42.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Text(
-                            text = "Analiz ediliyor...",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = "Gemini seçilen görselleri inceliyor.",
-                            color = Color(0xFFC9CCE8),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
         }
     }
 }
