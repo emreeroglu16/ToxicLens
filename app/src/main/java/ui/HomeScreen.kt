@@ -27,7 +27,8 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun HomeScreen(
-    onAnalyzeClick: () -> Unit
+    onAnalyzeClick: () -> Unit,
+    onHistoryClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -109,6 +110,7 @@ fun HomeScreen(
             )
 
             FeatureCard(
+                onClick = onHistoryClick,
                 icon = "◷",
                 title = "Previous Analyses",
                 badge = "Saved",

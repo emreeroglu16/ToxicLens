@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ConversationTypeScreen(
     imageUris: List<Uri>,
-    onContinue: (String) -> Unit,
+    onAnalysisComplete: (String, String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -95,8 +95,7 @@ fun ConversationTypeScreen(
                             selected = type
                         },
                     colors = CardDefaults.cardColors(
-                        containerColor =
-                            if (isSelected) Color(0xFFE9D8FD) else Color.White
+                        containerColor = if (isSelected) Color(0xFFE9D8FD) else Color.White
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {
@@ -133,7 +132,7 @@ fun ConversationTypeScreen(
 
                         isAnalyzing = false
 
-                        onContinue(result)
+                        onAnalysisComplete(result, selected)
                     }
                 },
                 enabled = selected.isNotEmpty() && !isAnalyzing,

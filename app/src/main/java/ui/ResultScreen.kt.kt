@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ResultScreen(
     result: String,
+    conversationType: String,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -71,7 +72,10 @@ fun ResultScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            ScoreCard(scoreText = score)
+            ScoreCard(
+                scoreText = score,
+                conversationType = conversationType
+            )
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -120,16 +124,12 @@ fun ResultScreen(
 }
 
 @Composable
-fun ScoreCard(scoreText: String) {
+fun ScoreCard(
+    scoreText: String,
+    conversationType: String
+) {
     val score = scoreText.filter { it.isDigit() }.toIntOrNull()?.coerceIn(0, 100) ?: 0
     val progress = score / 100f
-
-    val label = when {
-        score >= 75 -> "Strong"
-        score >= 50 -> "Moderate"
-        score >= 25 -> "Needs Attention"
-        else -> "Risky"
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -143,7 +143,7 @@ fun ScoreCard(scoreText: String) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "❤️ Relationship Score",
+                text = "${conversationType.trim()} Score",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge
@@ -167,7 +167,7 @@ fun ScoreCard(scoreText: String) {
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = label,
+                text = conversationType,
                 color = Color(0xFFE56BFF),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium

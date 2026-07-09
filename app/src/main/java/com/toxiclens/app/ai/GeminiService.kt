@@ -21,7 +21,7 @@ class GeminiService {
             val prompt = """
 Sen Read Between uygulamasının iletişim analiz motorusun.
 
-Conversation Type:
+Seçilen konuşma türü:
 $conversationType
 
 Bu görseller aynı konuşmanın devam eden ekran görüntüleridir.
