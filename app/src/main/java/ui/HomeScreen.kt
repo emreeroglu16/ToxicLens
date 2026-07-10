@@ -28,7 +28,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun HomeScreen(
     onAnalyzeClick: () -> Unit,
-    onHistoryClick: () -> Unit
+    onHistoryClick: () -> Unit,
+    onPremiumClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -116,6 +117,15 @@ fun HomeScreen(
                 badge = "Saved",
                 description = "View your saved analysis reports and history.",
                 accentColor = Color(0xFF37D67A)
+            )
+
+            FeatureCard(
+                onClick = onPremiumClick,
+                icon = "⭐",
+                title = "Read Between Premium",
+                badge = "Upgrade",
+                description = "Unlock 20 screenshots, unlimited history, PDF export and more.",
+                accentColor = Color(0xFFFFC857)
             )
 
             Row(

@@ -2,17 +2,15 @@ package com.toxiclens.app
 
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import com.toxiclens.app.billing.BillingManager
 import com.toxiclens.app.data.HistoryStore
-import com.toxiclens.app.ui.AnalyzeScreen
-import com.toxiclens.app.ui.ConversationTypeScreen
-import com.toxiclens.app.ui.HistoryScreen
-import com.toxiclens.app.ui.HomeScreen
-import com.toxiclens.app.ui.ResultScreen
+import com.toxiclens.app.ui.*
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -28,8 +26,41 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by remember { mutableStateOf("home") }
                 var analysisResult by remember { mutableStateOf("") }
-                var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-                var selectedConversationType by remember { mutableStateOf("❤️ Relationship") }
+                var selectedImageUris by remember {
+                    mutableStateOf<List<Uri>>(emptyList())
+                }
+                var selectedConversationType by remember {
+                    mutableStateOf("❤️ Relationship")
+                }
+                var isPremium by remember {
+                    mutableStateOf(false)
+                }
+
+                val billingManager = remember {
+                    BillingManager(
+                        context = applicationContext,
+                        onPremiumChanged = { premium ->
+                            isPremium = premium
+                        },
+                        onError = { message ->
+                            runOnUiThread {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    message,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    )
+                }
+
+                DisposableEffect(Unit) {
+                    billingManager.startConnection()
+
+                    onDispose {
+                        billingManager.endConnection()
+                    }
+                }
 
                 when (currentScreen) {
 
@@ -39,10 +70,25 @@ class MainActivity : ComponentActivity() {
                         },
                         onHistoryClick = {
                             currentScreen = "history"
+                        },
+                        onPremiumClick = {
+                            currentScreen = "premium"
                         }
                     )
 
                     "analyze" -> AnalyzeScreen(
+                        isPremiumUser = isPremium,
+                        onBack = {
+                            currentScreen = "home"
+                        },
+                        onImagesSelected = { uris ->
+                            selectedImageUris = uris
+                            currentScreen = "conversationType"
+                        }
+                    )
+
+                    "analyze" -> AnalyzeScreen(
+                        isPremiumUser = isPremium,
                         onBack = {
                             currentScreen = "home"
                         },
@@ -88,6 +134,28 @@ class MainActivity : ComponentActivity() {
                             analysisResult = result
                             selectedConversationType = type
                             currentScreen = "result"
+                        }
+                    )
+
+                    "premium" -> PremiumScreen(
+                        isPremium = isPremium,
+                        onMonthlyClick = {
+                            billingManager.launchPurchase(
+                                activity = this@MainActivity,
+                                basePlanId = "monthly"
+                            )
+                        },
+                        onYearlyClick = {
+                            billingManager.launchPurchase(
+                                activity = this@MainActivity,
+                                basePlanId = "yearly"
+                            )
+                        },
+                        onRestoreClick = {
+                            billingManager.checkExistingPurchases()
+                        },
+                        onBack = {
+                            currentScreen = "home"
                         }
                     )
                 }

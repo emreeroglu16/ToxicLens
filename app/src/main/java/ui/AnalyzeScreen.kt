@@ -26,10 +26,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun AnalyzeScreen(
+    isPremiumUser: Boolean,
     onBack: () -> Unit,
     onImagesSelected: (List<Uri>) -> Unit
 ) {
-    val isPremiumUser = false
     val screenshotLimit = if (isPremiumUser) 20 else 2
 
     var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
