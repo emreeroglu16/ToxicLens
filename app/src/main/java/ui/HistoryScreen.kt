@@ -26,9 +26,27 @@ fun HistoryScreen(
     val scope = rememberCoroutineScope()
 
     var historyItems by remember { mutableStateOf<List<String>>(emptyList()) }
+    var searchText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         historyItems = historyStore.getHistory()
+    }
+
+    val filteredItems = historyItems.filter { item ->
+        val type = extractHistoryValue(item, "TYPE")
+        val date = extractHistoryValue(item, "DATE")
+        val result = extractHistoryValue(item, "RESULT").ifBlank { item }
+
+        val score = extractSection(result, "RELATIONSHIP_SCORE")
+        val toxicity = extractSection(result, "TOXICITY_LEVEL")
+        val summary = extractSection(result, "SUMMARY")
+
+        searchText.isBlank() ||
+                type.contains(searchText, ignoreCase = true) ||
+                date.contains(searchText, ignoreCase = true) ||
+                score.contains(searchText, ignoreCase = true) ||
+                toxicity.contains(searchText, ignoreCase = true) ||
+                summary.contains(searchText, ignoreCase = true)
     }
 
     Column(
@@ -57,60 +75,118 @@ fun HistoryScreen(
             color = Color.Gray
         )
 
+        Spacer(modifier = Modifier.height(18.dp))
+
+        OutlinedTextField(
+            value = searchText,
+            onValueChange = {
+                searchText = it
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = {
+                Text("Search history")
+            },
+            placeholder = {
+                Text("Family, Boss, date, toxicity...")
+            },
+            leadingIcon = {
+                Text("🔍")
+            },
+            trailingIcon = {
+                if (searchText.isNotBlank()) {
+                    TextButton(
+                        onClick = {
+                            searchText = ""
+                        }
+                    ) {
+                        Text("✕")
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(18.dp)
+        )
+
         Spacer(modifier = Modifier.height(20.dp))
 
-        if (historyItems.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+        when {
+            historyItems.isEmpty() -> {
+                EmptyHistoryCard(
+                    title = "No analysis yet.",
+                    description = "Your completed analyses will appear here."
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp)
-                ) {
-                    Text(
-                        text = "No analysis yet.",
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Your completed analyses will appear here.",
-                        color = Color.Gray
-                    )
-                }
             }
-        } else {
-            historyItems.forEachIndexed { index, item ->
 
-                val type = extractHistoryValue(item, "TYPE").ifBlank { "❤️ Relationship" }
-                val date = extractHistoryValue(item, "DATE").ifBlank { "-" }
-                val result = extractHistoryValue(item, "RESULT").ifBlank { item }
-
-                HistoryItemCard(
-                    index = index + 1,
-                    conversationType = type,
-                    date = date,
-                    result = result,
-                    onClick = {
-                        onItemClick(result, type)
-                    },
-                    onDelete = {
-                        scope.launch {
-                            historyStore.deleteAnalysis(item)
-                            historyItems = historyStore.getHistory()
-                        }
-                    }
+            filteredItems.isEmpty() -> {
+                EmptyHistoryCard(
+                    title = "No matching analysis.",
+                    description = "Try a different search term."
                 )
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
+            else -> {
+                filteredItems.forEachIndexed { index, item ->
+                    val type = extractHistoryValue(item, "TYPE")
+                        .ifBlank { "❤️ Relationship" }
+
+                    val date = extractHistoryValue(item, "DATE")
+                        .ifBlank { "-" }
+
+                    val result = extractHistoryValue(item, "RESULT")
+                        .ifBlank { item }
+
+                    HistoryItemCard(
+                        index = index + 1,
+                        conversationType = type,
+                        date = date,
+                        result = result,
+                        onClick = {
+                            onItemClick(result, type)
+                        },
+                        onDelete = {
+                            scope.launch {
+                                historyStore.deleteAnalysis(item)
+                                historyItems = historyStore.getHistory()
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+fun EmptyHistoryCard(
+    title: String,
+    description: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = description,
+                color = Color.Gray
+            )
+        }
     }
 }
 
@@ -132,7 +208,9 @@ fun HistoryItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable {
+                onClick()
+            },
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
@@ -166,7 +244,7 @@ fun HistoryItemCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "❤️ Score: $score / 100",
+                text = "⭐ Score: $score / 100",
                 color = Color(0xFF151525)
             )
 
@@ -218,7 +296,10 @@ fun HistoryItemCard(
                         onDelete()
                     }
                 ) {
-                    Text("Delete")
+                    Text(
+                        text = "Delete",
+                        color = Color(0xFFFF5C7A)
+                    )
                 }
             },
             dismissButton = {
@@ -244,7 +325,6 @@ fun extractHistoryValue(
     if (startIndex == -1) return ""
 
     val contentStart = startIndex + startTag.length
-
     val nextIndex = text.indexOf("###", contentStart)
 
     return if (nextIndex == -1) {
