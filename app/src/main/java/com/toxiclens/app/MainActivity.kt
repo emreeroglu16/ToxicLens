@@ -26,12 +26,15 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by remember { mutableStateOf("home") }
                 var analysisResult by remember { mutableStateOf("") }
+
                 var selectedImageUris by remember {
                     mutableStateOf<List<Uri>>(emptyList())
                 }
+
                 var selectedConversationType by remember {
                     mutableStateOf("❤️ Relationship")
                 }
+
                 var isPremium by remember {
                     mutableStateOf(false)
                 }
@@ -87,17 +90,6 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    "analyze" -> AnalyzeScreen(
-                        isPremiumUser = isPremium,
-                        onBack = {
-                            currentScreen = "home"
-                        },
-                        onImagesSelected = { uris ->
-                            selectedImageUris = uris
-                            currentScreen = "conversationType"
-                        }
-                    )
-
                     "conversationType" -> ConversationTypeScreen(
                         imageUris = selectedImageUris,
                         onBack = {
@@ -127,6 +119,10 @@ class MainActivity : ComponentActivity() {
                     )
 
                     "history" -> HistoryScreen(
+                        isPremiumUser = isPremium,
+                        onUpgradeClick = {
+                            currentScreen = "premium"
+                        },
                         onBack = {
                             currentScreen = "home"
                         },

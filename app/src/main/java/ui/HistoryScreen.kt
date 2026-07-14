@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -18,6 +19,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryScreen(
+    isPremiumUser: Boolean,
+    onUpgradeClick: () -> Unit,
     onBack: () -> Unit,
     onItemClick: (String, String) -> Unit
 ) {
@@ -25,14 +28,34 @@ fun HistoryScreen(
     val historyStore = remember { HistoryStore(context) }
     val scope = rememberCoroutineScope()
 
-    var historyItems by remember { mutableStateOf<List<String>>(emptyList()) }
-    var searchText by remember { mutableStateOf("") }
+    var historyItems by remember {
+        mutableStateOf<List<String>>(emptyList())
+    }
+
+    var searchText by remember {
+        mutableStateOf("")
+    }
+
+    var showPremiumDialog by remember {
+        mutableStateOf(false)
+    }
 
     LaunchedEffect(Unit) {
         historyItems = historyStore.getHistory()
     }
 
-    val filteredItems = historyItems.filter { item ->
+    val sortedItems = historyItems.sortedByDescending { item ->
+        extractHistoryValue(item, "FAVORITE")
+            .equals("true", ignoreCase = true)
+    }
+
+    val visibleItems = if (isPremiumUser) {
+        sortedItems
+    } else {
+        sortedItems.take(5)
+    }
+
+    val filteredItems = visibleItems.filter { item ->
         val type = extractHistoryValue(item, "TYPE")
         val date = extractHistoryValue(item, "DATE")
         val result = extractHistoryValue(item, "RESULT").ifBlank { item }
@@ -71,9 +94,47 @@ fun HistoryScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "${historyItems.size} saved analyses",
+            text = if (isPremiumUser) {
+                "${historyItems.size} saved analyses"
+            } else {
+                "${visibleItems.size} of ${historyItems.size} analyses shown"
+            },
             color = Color.Gray
         )
+
+        if (!isPremiumUser && historyItems.size > 5) {
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFF2CC)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "🔒 Free history limit reached",
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text("Free users can view the latest 5 analyses.")
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = onUpgradeClick,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Upgrade to Premium")
+                    }
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(18.dp))
 
@@ -110,7 +171,7 @@ fun HistoryScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         when {
-            historyItems.isEmpty() -> {
+            visibleItems.isEmpty() -> {
                 EmptyHistoryCard(
                     title = "No analysis yet.",
                     description = "Your completed analyses will appear here."
@@ -135,13 +196,29 @@ fun HistoryScreen(
                     val result = extractHistoryValue(item, "RESULT")
                         .ifBlank { item }
 
+                    val isFavorite = extractHistoryValue(
+                        item,
+                        "FAVORITE"
+                    ).equals("true", ignoreCase = true)
+
                     HistoryItemCard(
                         index = index + 1,
                         conversationType = type,
                         date = date,
                         result = result,
+                        isFavorite = isFavorite,
                         onClick = {
                             onItemClick(result, type)
+                        },
+                        onFavoriteClick = {
+                            if (isPremiumUser) {
+                                scope.launch {
+                                    historyStore.toggleFavorite(item)
+                                    historyItems = historyStore.getHistory()
+                                }
+                            } else {
+                                showPremiumDialog = true
+                            }
                         },
                         onDelete = {
                             scope.launch {
@@ -157,6 +234,39 @@ fun HistoryScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    if (showPremiumDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPremiumDialog = false
+            },
+            title = {
+                Text("⭐ Premium Feature")
+            },
+            text = {
+                Text("Favorites is available with Read Between Premium.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPremiumDialog = false
+                        onUpgradeClick()
+                    }
+                ) {
+                    Text("Upgrade")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPremiumDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -196,14 +306,29 @@ fun HistoryItemCard(
     conversationType: String,
     date: String,
     result: String,
+    isFavorite: Boolean,
     onClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
 
-    val score = extractSection(result, "RELATIONSHIP_SCORE").ifBlank { "0" }
-    val toxicity = extractSection(result, "TOXICITY_LEVEL").ifBlank { "Belirsiz" }
-    val summary = extractSection(result, "SUMMARY").ifBlank { "Özet yok." }
+    val score = extractSection(
+        result,
+        "RELATIONSHIP_SCORE"
+    ).ifBlank { "0" }
+
+    val toxicity = extractSection(
+        result,
+        "TOXICITY_LEVEL"
+    ).ifBlank { "Belirsiz" }
+
+    val summary = extractSection(
+        result,
+        "SUMMARY"
+    ).ifBlank { "Özet yok." }
 
     Card(
         modifier = Modifier
@@ -219,13 +344,27 @@ fun HistoryItemCard(
         Column(
             modifier = Modifier.padding(18.dp)
         ) {
-            Text(
-                text = "Analysis #$index",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Analysis #$index",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                IconButton(
+                    onClick = onFavoriteClick
+                ) {
+                    Text(
+                        text = if (isFavorite) "★" else "☆",
+                        color = Color(0xFFFFB300),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
+            }
 
             Text(
                 text = conversationType,
@@ -322,7 +461,9 @@ fun extractHistoryValue(
     val startTag = "$key::"
     val startIndex = text.indexOf(startTag)
 
-    if (startIndex == -1) return ""
+    if (startIndex == -1) {
+        return ""
+    }
 
     val contentStart = startIndex + startTag.length
     val nextIndex = text.indexOf("###", contentStart)
