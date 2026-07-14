@@ -21,6 +21,7 @@ fun PremiumScreen(
     onMonthlyClick: () -> Unit,
     onYearlyClick: () -> Unit,
     onRestoreClick: () -> Unit,
+    onPdfBrandingClick: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(
@@ -137,6 +138,18 @@ fun PremiumScreen(
         ComparisonCard()
 
         Spacer(modifier = Modifier.height(18.dp))
+
+        Button(
+            onClick = onPdfBrandingClick,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF151A35)
+            )
+        ) {
+            Text("📄 PDF Branding Settings")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         TextButton(
             onClick = onRestoreClick,

@@ -3,14 +3,15 @@ package com.toxiclens.app.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,29 +19,110 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.toxiclens.app.data.PdfBranding
+import com.toxiclens.app.pdf.PdfReportGenerator
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun ResultScreen(
     result: String,
     conversationType: String,
+    isPremiumUser: Boolean,
+    pdfBranding: PdfBranding,
+    onUpgradeClick: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val snackbarHostState = SnackbarHostState()
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    val score = extractSection(result, "RELATIONSHIP_SCORE").ifBlank { "0" }
-    val toxicity = extractSection(result, "TOXICITY_LEVEL").ifBlank { "Belirsiz" }
-    val emotion = extractSection(result, "EMOTIONAL_TONE").ifBlank { "Belirlenemedi." }
-    val intent = extractSection(result, "HIDDEN_INTENT").ifBlank { "Belirgin bir gizli niyet tespit edilemedi." }
-    val greenFlags = extractSection(result, "GREEN_FLAGS").ifBlank { "Belirgin olumlu işaret yok." }
-    val redFlags = extractSection(result, "RED_FLAGS").ifBlank { "Belirgin kırmızı bayrak yok." }
-    val summary = extractSection(result, "SUMMARY").ifBlank { "Özet çıkarılamadı." }
-    val suggestedReply = extractSection(result, "SUGGESTED_REPLY").ifBlank { "Cevap önerisi oluşturulamadı." }
+    var showPremiumDialog by remember {
+        mutableStateOf(false)
+    }
+
+    val score = extractSection(
+        result,
+        "RELATIONSHIP_SCORE"
+    ).ifBlank { "0" }
+
+    val toxicity = extractSection(
+        result,
+        "TOXICITY_LEVEL"
+    ).ifBlank { "Belirsiz" }
+
+    val emotion = extractSection(
+        result,
+        "EMOTIONAL_TONE"
+    ).ifBlank { "Belirlenemedi." }
+
+    val intent = extractSection(
+        result,
+        "HIDDEN_INTENT"
+    ).ifBlank {
+        "Belirgin bir gizli niyet tespit edilemedi."
+    }
+
+    val greenFlags = extractSection(
+        result,
+        "GREEN_FLAGS"
+    ).ifBlank {
+        "Belirgin olumlu işaret yok."
+    }
+
+    val redFlags = extractSection(
+        result,
+        "RED_FLAGS"
+    ).ifBlank {
+        "Belirgin kırmızı bayrak yok."
+    }
+
+    val summary = extractSection(
+        result,
+        "SUMMARY"
+    ).ifBlank {
+        "Özet çıkarılamadı."
+    }
+
+    val suggestedReply = extractSection(
+        result,
+        "SUGGESTED_REPLY"
+    ).ifBlank {
+        "Cevap önerisi oluşturulamadı."
+    }
+
+    val createPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(
+            "application/pdf"
+        )
+    ) { uri ->
+        if (uri != null) {
+            val success = PdfReportGenerator.createPdf(
+                context = context,
+                outputUri = uri,
+                result = result,
+                conversationType = conversationType,
+                branding = pdfBranding
+            )
+
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    if (success) {
+                        "PDF report saved successfully."
+                    } else {
+                        "PDF report could not be created."
+                    }
+                )
+            }
+        }
+    }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        },
         containerColor = Color(0xFFF7F7FB)
     ) { padding ->
         Column(
@@ -51,11 +133,18 @@ fun ResultScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-            TextButton(onClick = onBack) {
-                Text("← Back", color = Color(0xFF6F50B5))
+            TextButton(
+                onClick = onBack
+            ) {
+                Text(
+                    text = "← Back",
+                    color = Color(0xFF6F50B5)
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(
+                modifier = Modifier.height(10.dp)
+            )
 
             Text(
                 text = "🧠 Analysis Complete",
@@ -70,37 +159,113 @@ fun ResultScreen(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(
+                modifier = Modifier.height(22.dp)
+            )
 
             ScoreCard(
                 scoreText = score,
                 conversationType = conversationType
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
 
-            ToxicityCard(toxicity)
+            ToxicityCard(
+                toxicity = toxicity
+            )
 
-            ResultCard("😊 Emotional Tone", emotion, Color.White)
-            ResultCard("🧠 Hidden Intent", cleanIntent(intent), Color.White)
-            ResultCard("💚 Green Flags", formatFlags(greenFlags, "✅"), Color(0xFFEFFBF4))
-            ResultCard("🚩 Red Flags", formatFlags(redFlags, "⚠️"), Color(0xFFFFF1F3))
-            ResultCard("📝 Summary", summary, Color.White)
+            ResultCard(
+                title = "😊 Emotional Tone",
+                content = emotion,
+                containerColor = Color.White
+            )
+
+            ResultCard(
+                title = "🧠 Hidden Intent",
+                content = cleanIntent(intent),
+                containerColor = Color.White
+            )
+
+            ResultCard(
+                title = "💚 Green Flags",
+                content = formatFlags(
+                    greenFlags,
+                    "✅"
+                ),
+                containerColor = Color(0xFFEFFBF4)
+            )
+
+            ResultCard(
+                title = "🚩 Red Flags",
+                content = formatFlags(
+                    redFlags,
+                    "⚠️"
+                ),
+                containerColor = Color(0xFFFFF1F3)
+            )
+
+            ResultCard(
+                title = "📝 Summary",
+                content = summary,
+                containerColor = Color.White
+            )
 
             SuggestedReplyCard(
                 reply = suggestedReply,
                 onCopy = {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clipboard = context.getSystemService(
+                        Context.CLIPBOARD_SERVICE
+                    ) as ClipboardManager
+
                     clipboard.setPrimaryClip(
-                        ClipData.newPlainText("Suggested Reply", suggestedReply)
+                        ClipData.newPlainText(
+                            "Suggested Reply",
+                            suggestedReply
+                        )
                     )
+
                     scope.launch {
-                        snackbarHostState.showSnackbar("Reply copied")
+                        snackbarHostState.showSnackbar(
+                            "Reply copied"
+                        )
                     }
                 }
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Button(
+                onClick = {
+                    if (isPremiumUser) {
+                        val date = SimpleDateFormat(
+                            "yyyyMMdd_HHmm",
+                            Locale.getDefault()
+                        ).format(Date())
+
+                        createPdfLauncher.launch(
+                            "Read_Between_Report_$date.pdf"
+                        )
+                    } else {
+                        showPremiumDialog = true
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF151A35)
+                )
+            ) {
+                Text(
+                    text = if (isPremiumUser) {
+                        "📄 Export PDF"
+                    } else {
+                        "🔒 Export PDF — Premium"
+                    }
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
 
             Text(
                 text = "ℹ️ This AI analysis is based only on the screenshots you provided. It should be treated as a helpful suggestion, not a factual judgment.",
@@ -108,7 +273,9 @@ fun ResultScreen(
                 style = MaterialTheme.typography.bodySmall
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(
+                modifier = Modifier.height(24.dp)
+            )
 
             Button(
                 onClick = onBack,
@@ -121,6 +288,41 @@ fun ResultScreen(
             }
         }
     }
+
+    if (showPremiumDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showPremiumDialog = false
+            },
+            title = {
+                Text("📄 Premium PDF Export")
+            },
+            text = {
+                Text(
+                    "PDF export and corporate branding are available with Read Between Premium."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPremiumDialog = false
+                        onUpgradeClick()
+                    }
+                ) {
+                    Text("Upgrade")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPremiumDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -128,7 +330,12 @@ fun ScoreCard(
     scoreText: String,
     conversationType: String
 ) {
-    val score = scoreText.filter { it.isDigit() }.toIntOrNull()?.coerceIn(0, 100) ?: 0
+    val score = scoreText
+        .filter { it.isDigit() }
+        .toIntOrNull()
+        ?.coerceIn(0, 100)
+        ?: 0
+
     val progress = score / 100f
 
     Card(
@@ -149,7 +356,9 @@ fun ScoreCard(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
 
             Text(
                 text = "$score",
@@ -164,7 +373,9 @@ fun ScoreCard(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
 
             Text(
                 text = conversationType,
@@ -173,14 +384,20 @@ fun ScoreCard(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
 
             LinearProgressIndicator(
-                progress = { progress },
+                progress = {
+                    progress
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(12.dp)
-                    .clip(RoundedCornerShape(50.dp)),
+                    .clip(
+                        RoundedCornerShape(50.dp)
+                    ),
                 color = Color(0xFFE56BFF),
                 trackColor = Color(0xFF303655)
             )
@@ -189,20 +406,46 @@ fun ScoreCard(
 }
 
 @Composable
-fun ToxicityCard(toxicity: String) {
+fun ToxicityCard(
+    toxicity: String
+) {
     val clean = toxicity.trim()
 
     val badgeColor = when {
-        clean.contains("yüksek", ignoreCase = true) -> Color(0xFFFFD6DC)
-        clean.contains("orta", ignoreCase = true) -> Color(0xFFFFF0C2)
-        clean.contains("düşük", ignoreCase = true) -> Color(0xFFDFF8EA)
+        clean.contains(
+            "yüksek",
+            ignoreCase = true
+        ) -> Color(0xFFFFD6DC)
+
+        clean.contains(
+            "orta",
+            ignoreCase = true
+        ) -> Color(0xFFFFF0C2)
+
+        clean.contains(
+            "düşük",
+            ignoreCase = true
+        ) -> Color(0xFFDFF8EA)
+
         else -> Color(0xFFEDEDF5)
     }
 
     val badgeText = when {
-        clean.contains("yüksek", ignoreCase = true) -> "🔴 YÜKSEK"
-        clean.contains("orta", ignoreCase = true) -> "🟡 ORTA"
-        clean.contains("düşük", ignoreCase = true) -> "🟢 DÜŞÜK"
+        clean.contains(
+            "yüksek",
+            ignoreCase = true
+        ) -> "🔴 YÜKSEK"
+
+        clean.contains(
+            "orta",
+            ignoreCase = true
+        ) -> "🟡 ORTA"
+
+        clean.contains(
+            "düşük",
+            ignoreCase = true
+        ) -> "🟢 DÜŞÜK"
+
         else -> clean.uppercase()
     }
 
@@ -211,9 +454,13 @@ fun ToxicityCard(toxicity: String) {
             .fillMaxWidth()
             .padding(bottom = 14.dp),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
             Text(
                 text = "☣ Toxicity Level",
                 color = Color(0xFF151525),
@@ -221,7 +468,9 @@ fun ToxicityCard(toxicity: String) {
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
 
             Surface(
                 color = badgeColor,
@@ -229,7 +478,10 @@ fun ToxicityCard(toxicity: String) {
             ) {
                 Text(
                     text = badgeText,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(
+                        horizontal = 16.dp,
+                        vertical = 8.dp
+                    ),
                     color = Color(0xFF202030),
                     fontWeight = FontWeight.Bold
                 )
@@ -249,9 +501,13 @@ fun ResultCard(
             .fillMaxWidth()
             .padding(bottom = 14.dp),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor
+        )
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
             Text(
                 text = title,
                 color = Color(0xFF151525),
@@ -259,7 +515,9 @@ fun ResultCard(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
 
             Text(
                 text = content,
@@ -284,7 +542,9 @@ fun SuggestedReplyCard(
             containerColor = Color(0xFFEFEFFF)
         )
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
             Text(
                 text = "💬 Suggested Reply",
                 color = Color(0xFF151525),
@@ -292,7 +552,9 @@ fun SuggestedReplyCard(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(
+                modifier = Modifier.height(10.dp)
+            )
 
             Text(
                 text = reply,
@@ -300,7 +562,9 @@ fun SuggestedReplyCard(
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
 
             Button(
                 onClick = onCopy,
@@ -322,9 +586,12 @@ fun extractSection(
     val sectionStart = "$sectionName:"
     val startIndex = text.indexOf(sectionStart)
 
-    if (startIndex == -1) return ""
+    if (startIndex == -1) {
+        return ""
+    }
 
-    val contentStart = startIndex + sectionStart.length
+    val contentStart =
+        startIndex + sectionStart.length
 
     val nextSections = listOf(
         "RELATIONSHIP_SCORE:",
@@ -338,19 +605,39 @@ fun extractSection(
     )
 
     val nextIndex = nextSections
-        .filter { it != sectionStart }
-        .map { text.indexOf(it, contentStart) }
-        .filter { it != -1 }
-        .minOrNull() ?: text.length
+        .filter {
+            it != sectionStart
+        }
+        .map {
+            text.indexOf(
+                it,
+                contentStart
+            )
+        }
+        .filter {
+            it != -1
+        }
+        .minOrNull()
+        ?: text.length
 
-    return text.substring(contentStart, nextIndex).trim()
+    return text.substring(
+        contentStart,
+        nextIndex
+    ).trim()
 }
 
-fun formatFlags(text: String, icon: String): String {
+fun formatFlags(
+    text: String,
+    icon: String
+): String {
     return text
         .lines()
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
+        .map {
+            it.trim()
+        }
+        .filter {
+            it.isNotBlank()
+        }
         .joinToString("\n") { line ->
             val cleanLine = line
                 .removePrefix("*")
@@ -359,8 +646,14 @@ fun formatFlags(text: String, icon: String): String {
                 .trim()
 
             if (
-                cleanLine.contains("yok", ignoreCase = true) ||
-                cleanLine.contains("belirgin", ignoreCase = true).not()
+                cleanLine.contains(
+                    "yok",
+                    ignoreCase = true
+                ) ||
+                !cleanLine.contains(
+                    "belirgin",
+                    ignoreCase = true
+                )
             ) {
                 "$icon $cleanLine"
             } else {
@@ -369,8 +662,15 @@ fun formatFlags(text: String, icon: String): String {
         }
 }
 
-fun cleanIntent(text: String): String {
-    return if (text.contains("net değil", ignoreCase = true)) {
+fun cleanIntent(
+    text: String
+): String {
+    return if (
+        text.contains(
+            "net değil",
+            ignoreCase = true
+        )
+    ) {
         "Belirgin bir gizli niyet tespit edilemedi."
     } else {
         text

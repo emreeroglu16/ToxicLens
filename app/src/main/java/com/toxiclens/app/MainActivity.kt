@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import com.toxiclens.app.billing.BillingManager
 import com.toxiclens.app.data.HistoryStore
+import com.toxiclens.app.data.PdfBranding
+import com.toxiclens.app.data.PdfBrandingStore
 import com.toxiclens.app.ui.*
 import kotlinx.coroutines.launch
 
@@ -22,10 +24,16 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val context = LocalContext.current
                 val historyStore = remember { HistoryStore(context) }
+                val pdfBrandingStore = remember { PdfBrandingStore(context) }
                 val scope = rememberCoroutineScope()
 
-                var currentScreen by remember { mutableStateOf("home") }
-                var analysisResult by remember { mutableStateOf("") }
+                var currentScreen by remember {
+                    mutableStateOf("home")
+                }
+
+                var analysisResult by remember {
+                    mutableStateOf("")
+                }
 
                 var selectedImageUris by remember {
                     mutableStateOf<List<Uri>>(emptyList())
@@ -37,6 +45,19 @@ class MainActivity : ComponentActivity() {
 
                 var isPremium by remember {
                     mutableStateOf(false)
+                }
+
+                // PDF ve Premium özelliklerini test etmek için geçici olarak true.
+                // Test bittikten sonra false yapacağız.
+                val forcePremiumForTesting = true
+                val effectivePremium = forcePremiumForTesting || isPremium
+
+                var pdfBranding by remember {
+                    mutableStateOf(PdfBranding())
+                }
+
+                LaunchedEffect(Unit) {
+                    pdfBranding = pdfBrandingStore.getBranding()
                 }
 
                 val billingManager = remember {
@@ -80,7 +101,7 @@ class MainActivity : ComponentActivity() {
                     )
 
                     "analyze" -> AnalyzeScreen(
-                        isPremiumUser = isPremium,
+                        isPremiumUser = effectivePremium,
                         onBack = {
                             currentScreen = "home"
                         },
@@ -113,13 +134,18 @@ class MainActivity : ComponentActivity() {
                     "result" -> ResultScreen(
                         result = analysisResult,
                         conversationType = selectedConversationType,
+                        isPremiumUser = effectivePremium,
+                        pdfBranding = pdfBranding,
+                        onUpgradeClick = {
+                            currentScreen = "premium"
+                        },
                         onBack = {
                             currentScreen = "conversationType"
                         }
                     )
 
                     "history" -> HistoryScreen(
-                        isPremiumUser = isPremium,
+                        isPremiumUser = effectivePremium,
                         onUpgradeClick = {
                             currentScreen = "premium"
                         },
@@ -134,7 +160,7 @@ class MainActivity : ComponentActivity() {
                     )
 
                     "premium" -> PremiumScreen(
-                        isPremium = isPremium,
+                        isPremium = effectivePremium,
                         onMonthlyClick = {
                             billingManager.launchPurchase(
                                 activity = this@MainActivity,
@@ -150,8 +176,56 @@ class MainActivity : ComponentActivity() {
                         onRestoreClick = {
                             billingManager.checkExistingPurchases()
                         },
+                        onPdfBrandingClick = {
+                            currentScreen = "pdfBranding"
+                        },
                         onBack = {
                             currentScreen = "home"
+                        }
+                    )
+
+                    "pdfBranding" -> PdfBrandingScreen(
+                        initialLogoUri = pdfBranding.logoUri,
+                        initialCompanyName = pdfBranding.companyName,
+                        initialPhone = pdfBranding.phone,
+                        initialEmail = pdfBranding.email,
+                        initialWebsite = pdfBranding.website,
+                        initialAddress = pdfBranding.address,
+                        onSave = {
+                                logoUri,
+                                companyName,
+                                phone,
+                                email,
+                                website,
+                                address ->
+
+                            val updatedBranding = PdfBranding(
+                                logoUri = logoUri,
+                                companyName = companyName,
+                                phone = phone,
+                                email = email,
+                                website = website,
+                                address = address
+                            )
+
+                            pdfBranding = updatedBranding
+
+                            scope.launch {
+                                pdfBrandingStore.saveBranding(
+                                    updatedBranding
+                                )
+
+                                Toast.makeText(
+                                    context,
+                                    "PDF branding saved.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+
+                            currentScreen = "premium"
+                        },
+                        onBack = {
+                            currentScreen = "premium"
                         }
                     )
                 }
