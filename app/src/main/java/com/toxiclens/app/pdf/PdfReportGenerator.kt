@@ -35,22 +35,27 @@ object PdfReportGenerator {
         outputUri: Uri,
         result: String,
         conversationType: String,
-        branding: PdfBranding
+        branding: PdfBranding,
+        appLanguage: String
     ): Boolean {
         val document = PdfDocument()
+        val strings = PdfLanguage.get(appLanguage)
 
         return try {
             val writer = ReportWriter(
                 document = document,
                 context = context,
-                branding = branding
+                branding = branding,
+                strings = strings,
+                appLanguage = appLanguage
             )
 
             writer.startPage(isFirstPage = true)
 
             writer.drawReportInformation(
                 conversationType = cleanConversationType(
-                    conversationType
+                    conversationType = conversationType,
+                    appLanguage = appLanguage
                 )
             )
 
@@ -69,27 +74,27 @@ object PdfReportGenerator {
             )
 
             val sections = listOf(
-                "Emotional Tone" to extractSection(
+                strings.emotionalTone to extractSection(
                     result,
                     "EMOTIONAL_TONE"
                 ),
-                "Hidden Intent" to extractSection(
+                strings.hiddenIntent to extractSection(
                     result,
                     "HIDDEN_INTENT"
                 ),
-                "Green Flags" to extractSection(
+                strings.greenFlags to extractSection(
                     result,
                     "GREEN_FLAGS"
                 ),
-                "Red Flags" to extractSection(
+                strings.redFlags to extractSection(
                     result,
                     "RED_FLAGS"
                 ),
-                "Summary" to extractSection(
+                strings.summary to extractSection(
                     result,
                     "SUMMARY"
                 ),
-                "Suggested Reply" to extractSection(
+                strings.suggestedReply to extractSection(
                     result,
                     "SUGGESTED_REPLY"
                 )
@@ -121,7 +126,9 @@ object PdfReportGenerator {
     private class ReportWriter(
         private val document: PdfDocument,
         private val context: Context,
-        private val branding: PdfBranding
+        private val branding: PdfBranding,
+        private val strings: PdfStrings,
+        private val appLanguage: String
     ) {
         private var pageNumber = 0
         private var currentPage: PdfDocument.Page? = null
@@ -391,27 +398,21 @@ object PdfReportGenerator {
         }
 
         private fun drawFirstPageTitle(): Float {
-            val title =
-                "Conversation Analysis Report"
-
             val titleWidth =
-                titlePaint.measureText(title)
+                titlePaint.measureText(strings.reportTitle)
 
             canvas.drawText(
-                title,
+                strings.reportTitle,
                 (PAGE_WIDTH - titleWidth) / 2f,
                 184f,
                 titlePaint
             )
 
-            val subtitle =
-                "Professional AI-Assisted Communication Report"
-
             val subtitleWidth =
-                smallPaint.measureText(subtitle)
+                smallPaint.measureText(strings.reportSubtitle)
 
             canvas.drawText(
-                subtitle,
+                strings.reportSubtitle,
                 (PAGE_WIDTH - subtitleWidth) / 2f,
                 207f,
                 smallPaint
@@ -430,7 +431,7 @@ object PdfReportGenerator {
 
         private fun drawContinuedPageTitle(): Float {
             canvas.drawText(
-                "Conversation Analysis Report - Continued",
+                strings.reportContinued,
                 LEFT_MARGIN,
                 180f,
                 headingPaint
@@ -474,7 +475,7 @@ object PdfReportGenerator {
             )
 
             canvas.drawText(
-                "Conversation Type",
+                strings.conversationType,
                 LEFT_MARGIN + 16f,
                 y + 21f,
                 headingPaint
@@ -487,21 +488,25 @@ object PdfReportGenerator {
                 bodyPaint
             )
 
+            val dateLocale = if (appLanguage == "tr") {
+                Locale("tr", "TR")
+            } else {
+                Locale.ENGLISH
+            }
+
             val date = SimpleDateFormat(
                 "dd.MM.yyyy HH:mm",
-                Locale.getDefault()
+                dateLocale
             ).format(Date())
 
-            val dateLabel = "Report Date"
-
             val dateLabelWidth =
-                headingPaint.measureText(dateLabel)
+                headingPaint.measureText(strings.reportDate)
 
             val dateWidth =
                 bodyPaint.measureText(date)
 
             canvas.drawText(
-                dateLabel,
+                strings.reportDate,
                 PAGE_WIDTH -
                         RIGHT_MARGIN -
                         16f -
@@ -535,7 +540,7 @@ object PdfReportGenerator {
                 ?: 0
 
             drawSectionHeader(
-                title = "Communication Score"
+                title = strings.communicationScore
             )
 
             val scoreBox = RectF(
@@ -623,18 +628,34 @@ object PdfReportGenerator {
                 )
             }
 
-            val scoreLabel = when {
-                numericScore >= 80 ->
-                    "Strong communication"
+            val scoreLabel = if (appLanguage == "tr") {
+                when {
+                    numericScore >= 80 ->
+                        "Güçlü iletişim"
 
-                numericScore >= 60 ->
-                    "Generally positive communication"
+                    numericScore >= 60 ->
+                        "Genel olarak olumlu iletişim"
 
-                numericScore >= 40 ->
-                    "Communication needs attention"
+                    numericScore >= 40 ->
+                        "İletişim dikkat gerektiriyor"
 
-                else ->
-                    "High communication risk"
+                    else ->
+                        "Yüksek iletişim riski"
+                }
+            } else {
+                when {
+                    numericScore >= 80 ->
+                        "Strong communication"
+
+                    numericScore >= 60 ->
+                        "Generally positive communication"
+
+                    numericScore >= 40 ->
+                        "Communication needs attention"
+
+                    else ->
+                        "High communication risk"
+                }
             }
 
             val scoreLabelWidth =
@@ -656,7 +677,7 @@ object PdfReportGenerator {
             ensureSpace(98f)
 
             drawSectionHeader(
-                title = "Toxicity Level"
+                title = strings.toxicityLevel
             )
 
             val cleanToxicity =
@@ -668,15 +689,27 @@ object PdfReportGenerator {
                 cleanToxicity.contains(
                     "YÜKSEK",
                     ignoreCase = true
+                ) || cleanToxicity.contains(
+                    "HIGH",
+                    ignoreCase = true
                 ) -> Color.rgb(255, 218, 224)
 
                 cleanToxicity.contains(
                     "ORTA",
                     ignoreCase = true
+                ) || cleanToxicity.contains(
+                    "MEDIUM",
+                    ignoreCase = true
+                ) || cleanToxicity.contains(
+                    "MODERATE",
+                    ignoreCase = true
                 ) -> Color.rgb(255, 239, 194)
 
                 cleanToxicity.contains(
                     "DÜŞÜK",
+                    ignoreCase = true
+                ) || cleanToxicity.contains(
+                    "LOW",
                     ignoreCase = true
                 ) -> Color.rgb(220, 247, 231)
 
@@ -877,20 +910,21 @@ object PdfReportGenerator {
             )
 
             canvas.drawText(
-                "Generated by Read Between AI",
+                strings.generatedBy,
                 LEFT_MARGIN,
                 FOOTER_TOP + 16f,
                 footerPaint
             )
 
             canvas.drawText(
-                "Confidential Report",
+                strings.confidential,
                 LEFT_MARGIN,
                 FOOTER_TOP + 29f,
                 footerPaint
             )
 
-            val pageText = "Page $pageNumber"
+            val pageText =
+                "${strings.page} $pageNumber"
 
             val pageTextWidth =
                 footerPaint.measureText(pageText)
@@ -904,14 +938,11 @@ object PdfReportGenerator {
                 footerPaint
             )
 
-            val warning =
-                "AI-generated content is supportive guidance, not definitive proof."
-
             val warningWidth =
-                footerPaint.measureText(warning)
+                footerPaint.measureText(strings.warning)
 
             canvas.drawText(
-                warning,
+                strings.warning,
                 PAGE_WIDTH -
                         RIGHT_MARGIN -
                         warningWidth,
@@ -1012,12 +1043,57 @@ object PdfReportGenerator {
     }
 
     private fun cleanConversationType(
-        conversationType: String
+        conversationType: String,
+        appLanguage: String
     ): String {
-        return cleanPdfText(
+        val cleaned = cleanPdfText(
             conversationType
-        ).ifBlank {
-            "Other"
+        ).trim()
+
+        if (cleaned.isBlank()) {
+            return if (appLanguage == "tr") {
+                "Diğer"
+            } else {
+                "Other"
+            }
+        }
+
+        return if (appLanguage == "tr") {
+            when {
+                cleaned.contains(
+                    "Relationship",
+                    ignoreCase = true
+                ) -> "İlişki"
+
+                cleaned.contains(
+                    "Friend",
+                    ignoreCase = true
+                ) -> "Arkadaş"
+
+                cleaned.contains(
+                    "Family",
+                    ignoreCase = true
+                ) -> "Aile"
+
+                cleaned.contains(
+                    "Boss",
+                    ignoreCase = true
+                ) -> "Yönetici"
+
+                cleaned.contains(
+                    "Customer",
+                    ignoreCase = true
+                ) -> "Müşteri"
+
+                cleaned.contains(
+                    "Other",
+                    ignoreCase = true
+                ) -> "Diğer"
+
+                else -> cleaned
+            }
+        } else {
+            cleaned
         }
     }
 

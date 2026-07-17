@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 // Geçici Premium testi.
-                // Yayından önce false yapılacak.
+                // Google Play yayını öncesinde false yapılacak.
                 val forcePremiumForTesting = true
                 val effectivePremium =
                     forcePremiumForTesting || isPremium
@@ -96,176 +96,218 @@ class MainActivity : ComponentActivity() {
 
                 when (currentScreen) {
 
-                    "home" -> HomeScreen(
-                        onAnalyzeClick = {
-                            currentScreen = "analyze"
-                        },
-                        onHistoryClick = {
-                            currentScreen = "history"
-                        },
-                        onPremiumClick = {
-                            currentScreen = "premium"
-                        }
-                    )
-
-                    "analyze" -> AnalyzeScreen(
-                        isPremiumUser = effectivePremium,
-                        onBack = {
-                            currentScreen = "home"
-                        },
-                        onImagesSelected = { uris ->
-                            selectedImageUris = uris
-                            currentScreen = "conversationType"
-                        }
-                    )
-
-                    "conversationType" -> ConversationTypeScreen(
-                        imageUris = selectedImageUris,
-                        onBack = {
-                            currentScreen = "analyze"
-                        },
-                        onAnalysisComplete = { result, type ->
-                            analysisResult = result
-                            selectedConversationType = type
-
-                            scope.launch {
-                                historyStore.saveAnalysis(
-                                    result = result,
-                                    conversationType = type
-                                )
+                    "home" -> {
+                        HomeScreen(
+                            onAnalyzeClick = {
+                                currentScreen = "analyze"
+                            },
+                            onHistoryClick = {
+                                currentScreen = "history"
+                            },
+                            onPremiumClick = {
+                                currentScreen = "premium"
+                            },
+                            onSettingsClick = {
+                                currentScreen = "settings"
                             }
+                        )
+                    }
 
-                            currentScreen = "result"
-                        }
-                    )
-
-                    "result" -> ResultScreen(
-                        result = analysisResult,
-                        conversationType = selectedConversationType,
-                        isPremiumUser = effectivePremium,
-                        pdfBranding = pdfBranding,
-                        appLanguage = appLanguage,
-                        onUpgradeClick = {
-                            currentScreen = "premium"
-                        },
-                        onBack = {
-                            currentScreen = "conversationType"
-                        }
-                    )
-
-                    "history" -> HistoryScreen(
-                        isPremiumUser = effectivePremium,
-                        onUpgradeClick = {
-                            currentScreen = "premium"
-                        },
-                        onBack = {
-                            currentScreen = "home"
-                        },
-                        onItemClick = { result, type ->
-                            analysisResult = result
-                            selectedConversationType = type
-                            currentScreen = "result"
-                        }
-                    )
-
-                    "premium" -> PremiumScreen(
-                        isPremium = effectivePremium,
-                        onMonthlyClick = {
-                            billingManager.launchPurchase(
-                                activity = this@MainActivity,
-                                basePlanId = "monthly"
-                            )
-                        },
-                        onYearlyClick = {
-                            billingManager.launchPurchase(
-                                activity = this@MainActivity,
-                                basePlanId = "yearly"
-                            )
-                        },
-                        onRestoreClick = {
-                            billingManager.checkExistingPurchases()
-                        },
-                        onPdfBrandingClick = {
-                            currentScreen = "pdfBranding"
-                        },
-                        onLanguageClick = {
-                            currentScreen = "language"
-                        },
-                        onBack = {
-                            currentScreen = "home"
-                        }
-                    )
-
-                    "language" -> LanguageSettingsScreen(
-                        selectedLanguage = appLanguage,
-                        onLanguageSelected = { languageCode ->
-                            appLanguage = languageCode
-
-                            scope.launch {
-                                languageStore.saveLanguage(languageCode)
+                    "settings" -> {
+                        SettingsScreen(
+                            appLanguage = appLanguage,
+                            isPremium = effectivePremium,
+                            onLanguageClick = {
+                                currentScreen = "language"
+                            },
+                            onPdfBrandingClick = {
+                                currentScreen = "pdfBranding"
+                            },
+                            onPremiumClick = {
+                                currentScreen = "premium"
+                            },
+                            onPrivacyClick = {},
+                            onContactClick = {},
+                            onRateAppClick = {},
+                            onAboutClick = {},
+                            onBack = {
+                                currentScreen = "home"
                             }
+                        )
+                    }
 
-                            Toast.makeText(
-                                context,
-                                if (languageCode == "tr") {
-                                    "Dil Türkçe olarak kaydedildi."
-                                } else {
-                                    "Language saved as English."
-                                },
-                                Toast.LENGTH_SHORT
-                            ).show()
+                    "analyze" -> {
+                        AnalyzeScreen(
+                            isPremiumUser = effectivePremium,
+                            onBack = {
+                                currentScreen = "home"
+                            },
+                            onImagesSelected = { uris ->
+                                selectedImageUris = uris
+                                currentScreen = "conversationType"
+                            }
+                        )
+                    }
 
-                            currentScreen = "premium"
-                        },
-                        onBack = {
-                            currentScreen = "premium"
-                        }
-                    )
+                    "conversationType" -> {
+                        ConversationTypeScreen(
+                            imageUris = selectedImageUris,
+                            onBack = {
+                                currentScreen = "analyze"
+                            },
+                            onAnalysisComplete = { result, type ->
+                                analysisResult = result
+                                selectedConversationType = type
 
-                    "pdfBranding" -> PdfBrandingScreen(
-                        initialLogoUri = pdfBranding.logoUri,
-                        initialCompanyName = pdfBranding.companyName,
-                        initialPhone = pdfBranding.phone,
-                        initialEmail = pdfBranding.email,
-                        initialWebsite = pdfBranding.website,
-                        initialAddress = pdfBranding.address,
-                        onSave = {
-                                logoUri,
-                                companyName,
-                                phone,
-                                email,
-                                website,
-                                address ->
+                                scope.launch {
+                                    historyStore.saveAnalysis(
+                                        result = result,
+                                        conversationType = type
+                                    )
+                                }
 
-                            val updatedBranding = PdfBranding(
-                                logoUri = logoUri,
-                                companyName = companyName,
-                                phone = phone,
-                                email = email,
-                                website = website,
-                                address = address
-                            )
+                                currentScreen = "result"
+                            }
+                        )
+                    }
 
-                            pdfBranding = updatedBranding
+                    "result" -> {
+                        ResultScreen(
+                            result = analysisResult,
+                            conversationType = selectedConversationType,
+                            isPremiumUser = effectivePremium,
+                            pdfBranding = pdfBranding,
+                            appLanguage = appLanguage,
+                            onUpgradeClick = {
+                                currentScreen = "premium"
+                            },
+                            onBack = {
+                                currentScreen = "conversationType"
+                            }
+                        )
+                    }
 
-                            scope.launch {
-                                pdfBrandingStore.saveBranding(
-                                    updatedBranding
+                    "history" -> {
+                        HistoryScreen(
+                            isPremiumUser = effectivePremium,
+                            onUpgradeClick = {
+                                currentScreen = "premium"
+                            },
+                            onBack = {
+                                currentScreen = "home"
+                            },
+                            onItemClick = { result, type ->
+                                analysisResult = result
+                                selectedConversationType = type
+                                currentScreen = "result"
+                            }
+                        )
+                    }
+
+                    "premium" -> {
+                        PremiumScreen(
+                            isPremium = effectivePremium,
+                            onMonthlyClick = {
+                                billingManager.launchPurchase(
+                                    activity = this@MainActivity,
+                                    basePlanId = "monthly"
                                 )
+                            },
+                            onYearlyClick = {
+                                billingManager.launchPurchase(
+                                    activity = this@MainActivity,
+                                    basePlanId = "yearly"
+                                )
+                            },
+                            onRestoreClick = {
+                                billingManager.checkExistingPurchases()
+                            },
+                            onPdfBrandingClick = {
+                                currentScreen = "pdfBranding"
+                            },
+                            onLanguageClick = {
+                                currentScreen = "language"
+                            },
+                            onBack = {
+                                currentScreen = "settings"
+                            }
+                        )
+                    }
+
+                    "language" -> {
+                        LanguageSettingsScreen(
+                            selectedLanguage = appLanguage,
+                            onLanguageSelected = { languageCode ->
+                                appLanguage = languageCode
+
+                                scope.launch {
+                                    languageStore.saveLanguage(languageCode)
+                                }
 
                                 Toast.makeText(
                                     context,
-                                    "PDF branding saved.",
+                                    if (languageCode == "tr") {
+                                        "Dil Türkçe olarak kaydedildi."
+                                    } else {
+                                        "Language saved as English."
+                                    },
                                     Toast.LENGTH_SHORT
                                 ).show()
-                            }
 
-                            currentScreen = "premium"
-                        },
-                        onBack = {
-                            currentScreen = "premium"
-                        }
-                    )
+                                currentScreen = "settings"
+                            },
+                            onBack = {
+                                currentScreen = "settings"
+                            }
+                        )
+                    }
+
+                    "pdfBranding" -> {
+                        PdfBrandingScreen(
+                            initialLogoUri = pdfBranding.logoUri,
+                            initialCompanyName = pdfBranding.companyName,
+                            initialPhone = pdfBranding.phone,
+                            initialEmail = pdfBranding.email,
+                            initialWebsite = pdfBranding.website,
+                            initialAddress = pdfBranding.address,
+                            onSave = {
+                                    logoUri,
+                                    companyName,
+                                    phone,
+                                    email,
+                                    website,
+                                    address ->
+
+                                val updatedBranding = PdfBranding(
+                                    logoUri = logoUri,
+                                    companyName = companyName,
+                                    phone = phone,
+                                    email = email,
+                                    website = website,
+                                    address = address
+                                )
+
+                                pdfBranding = updatedBranding
+
+                                scope.launch {
+                                    pdfBrandingStore.saveBranding(
+                                        updatedBranding
+                                    )
+
+                                    Toast.makeText(
+                                        context,
+                                        "PDF branding saved.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                currentScreen = "settings"
+                            },
+                            onBack = {
+                                currentScreen = "settings"
+                            }
+                        )
+                    }
                 }
             }
         }

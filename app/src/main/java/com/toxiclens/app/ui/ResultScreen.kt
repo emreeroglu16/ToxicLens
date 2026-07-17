@@ -105,7 +105,8 @@ fun ResultScreen(
                 outputUri = uri,
                 result = result,
                 conversationType = conversationType,
-                branding = pdfBranding
+                branding = pdfBranding,
+                appLanguage = appLanguage
             )
 
             scope.launch {

@@ -29,7 +29,8 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     onAnalyzeClick: () -> Unit,
     onHistoryClick: () -> Unit,
-    onPremiumClick: () -> Unit
+    onPremiumClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -53,19 +54,36 @@ fun HomeScreen(
         ) {
             Spacer(Modifier.height(24.dp))
 
-            Text(
-                text = "Welcome 👋",
-                color = Color(0xFFC9CCE8),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.align(Alignment.Start)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
 
-            Text(
-                text = "Let's understand conversations.",
-                color = Color(0xFF8F94BD),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.align(Alignment.Start)
-            )
+                Column {
+                    Text(
+                        text = "Welcome 👋",
+                        color = Color(0xFFC9CCE8),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(
+                        text = "Let's understand conversations.",
+                        color = Color(0xFF8F94BD),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                IconButton(
+                    onClick = onSettingsClick
+                ) {
+                    Text(
+                        text = "⚙",
+                        fontSize = 28.sp,
+                        color = Color.White
+                    )
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
 
@@ -127,27 +145,6 @@ fun HomeScreen(
                 description = "Unlock 20 screenshots, unlimited history, PDF export and more.",
                 accentColor = Color(0xFFFFC857)
             )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                SmallCard(
-                    modifier = Modifier.weight(1f),
-                    icon = "◎",
-                    title = "Language",
-                    description = "English",
-                    accentColor = Color(0xFF9B5CFF)
-                )
-
-                SmallCard(
-                    modifier = Modifier.weight(1f),
-                    icon = "♙",
-                    title = "Sign in",
-                    description = "Save analyses",
-                    accentColor = Color(0xFF2F8CFF)
-                )
-            }
 
             Spacer(Modifier.height(16.dp))
 
