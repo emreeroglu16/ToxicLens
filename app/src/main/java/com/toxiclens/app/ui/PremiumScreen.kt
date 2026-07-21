@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -14,9 +15,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.toxiclens.app.strings.PremiumLanguage
+import com.toxiclens.app.strings.PremiumStrings
 
 @Composable
 fun PremiumScreen(
+    appLanguage: String,
     isPremium: Boolean,
     onMonthlyClick: () -> Unit,
     onYearlyClick: () -> Unit,
@@ -25,6 +29,10 @@ fun PremiumScreen(
     onLanguageClick: () -> Unit,
     onBack: () -> Unit
 ) {
+    val strings = remember(appLanguage) {
+        PremiumLanguage.get(appLanguage)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -41,7 +49,10 @@ fun PremiumScreen(
             .padding(22.dp)
     ) {
         TextButton(onClick = onBack) {
-            Text("← Back", color = Color(0xFFC9CCE8))
+            Text(
+                text = "← ${strings.back}",
+                color = Color(0xFFC9CCE8)
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -57,9 +68,9 @@ fun PremiumScreen(
 
         Text(
             text = if (isPremium) {
-                "Your Premium membership is active."
+                strings.activeDescription
             } else {
-                "Unlock deeper analysis and premium tools."
+                strings.inactiveDescription
             },
             color = Color(0xFFC9CCE8),
             style = MaterialTheme.typography.bodyLarge
@@ -68,13 +79,13 @@ fun PremiumScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         if (isPremium) {
-            PremiumActiveCard()
+            PremiumActiveCard(strings)
         } else {
             PlanCard(
-                title = "Monthly",
+                title = strings.monthly,
                 price = "₺99,99",
-                period = "/ month",
-                buttonText = "Choose Monthly",
+                period = strings.monthlyPeriod,
+                buttonText = strings.chooseMonthly,
                 buttonColor = Color(0xFF7A3CFF),
                 onClick = onMonthlyClick
             )
@@ -82,13 +93,13 @@ fun PremiumScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             PlanCard(
-                title = "Yearly",
+                title = strings.yearly,
                 price = "₺799,99",
-                period = "/ year",
-                buttonText = "Choose Yearly",
+                period = strings.yearlyPeriod,
+                buttonText = strings.chooseYearly,
                 buttonColor = Color(0xFFE56BFF),
-                badge = "MOST POPULAR",
-                savingText = "Save more with the yearly plan",
+                badge = strings.mostPopular,
+                savingText = strings.yearlySaving,
                 onClick = onYearlyClick
             )
         }
@@ -96,7 +107,7 @@ fun PremiumScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Premium Features",
+            text = strings.premiumFeatures,
             color = Color.White,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleLarge
@@ -106,37 +117,37 @@ fun PremiumScreen(
 
         PremiumFeatureCard(
             icon = "🖼️",
-            title = "20 Screenshots",
-            description = "Analyze longer conversations."
+            title = strings.screenshotsTitle,
+            description = strings.screenshotsDescription
         )
 
         PremiumFeatureCard(
             icon = "📜",
-            title = "Unlimited History",
-            description = "Keep all previous reports."
+            title = strings.unlimitedHistoryTitle,
+            description = strings.unlimitedHistoryDescription
         )
 
         PremiumFeatureCard(
             icon = "📄",
-            title = "PDF Export",
-            description = "Create professional reports."
+            title = strings.pdfExportTitle,
+            description = strings.pdfExportDescription
         )
 
         PremiumFeatureCard(
             icon = "⭐",
-            title = "Favorites",
-            description = "Save important analyses."
+            title = strings.favoritesTitle,
+            description = strings.favoritesDescription
         )
 
         PremiumFeatureCard(
             icon = "☁️",
-            title = "Cloud Sync",
-            description = "Access reports on other devices."
+            title = strings.cloudSyncTitle,
+            description = strings.cloudSyncDescription
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        ComparisonCard()
+        ComparisonCard(strings)
 
         Spacer(modifier = Modifier.height(18.dp))
 
@@ -147,7 +158,7 @@ fun PremiumScreen(
                 containerColor = Color(0xFF151A35)
             )
         ) {
-            Text("📄 PDF Branding Settings")
+            Text(strings.pdfBrandingSettings)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -159,7 +170,7 @@ fun PremiumScreen(
                 containerColor = Color(0xFF151A35)
             )
         ) {
-            Text("🌐 Language Settings")
+            Text(strings.languageSettings)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -169,13 +180,13 @@ fun PremiumScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Restore Purchase",
+                text = strings.restorePurchase,
                 color = Color(0xFFC9CCE8)
             )
         }
 
         Text(
-            text = "Subscriptions renew automatically unless cancelled through Google Play.",
+            text = strings.subscriptionNotice,
             color = Color(0xFF8B90B8),
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
@@ -187,7 +198,7 @@ fun PremiumScreen(
 }
 
 @Composable
-fun PlanCard(
+private fun PlanCard(
     title: String,
     price: String,
     period: String,
@@ -282,7 +293,9 @@ fun PlanCard(
 }
 
 @Composable
-fun PremiumActiveCard() {
+private fun PremiumActiveCard(
+    strings: PremiumStrings
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -294,7 +307,7 @@ fun PremiumActiveCard() {
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = "✓ Premium Active",
+                text = strings.premiumActive,
                 color = Color(0xFF71E6A7),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleLarge
@@ -303,7 +316,7 @@ fun PremiumActiveCard() {
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "All Premium features are unlocked.",
+                text = strings.allFeaturesUnlocked,
                 color = Color.White
             )
         }
@@ -311,7 +324,7 @@ fun PremiumActiveCard() {
 }
 
 @Composable
-fun PremiumFeatureCard(
+private fun PremiumFeatureCard(
     icon: String,
     title: String,
     description: String
@@ -355,7 +368,9 @@ fun PremiumFeatureCard(
 }
 
 @Composable
-fun ComparisonCard() {
+private fun ComparisonCard(
+    strings: PremiumStrings
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -367,7 +382,7 @@ fun ComparisonCard() {
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = "Free vs Premium",
+                text = strings.comparisonTitle,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
@@ -375,17 +390,17 @@ fun ComparisonCard() {
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            ComparisonRow("Screenshots", "2", "20")
-            ComparisonRow("History", "5", "Unlimited")
-            ComparisonRow("PDF Export", "—", "✓")
-            ComparisonRow("Favorites", "—", "✓")
-            ComparisonRow("Cloud Sync", "—", "✓")
+            ComparisonRow(strings.screenshots, "2", "20")
+            ComparisonRow(strings.history, "5", strings.unlimited)
+            ComparisonRow(strings.pdfExport, "—", "✓")
+            ComparisonRow(strings.favorites, "—", "✓")
+            ComparisonRow(strings.cloudSync, "—", "✓")
         }
     }
 }
 
 @Composable
-fun ComparisonRow(
+private fun ComparisonRow(
     feature: String,
     freeValue: String,
     premiumValue: String

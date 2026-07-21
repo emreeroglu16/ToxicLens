@@ -18,9 +18,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.toxiclens.app.data.PdfBranding
 import com.toxiclens.app.pdf.PdfReportGenerator
+import com.toxiclens.app.strings.ResultLanguage
+import com.toxiclens.app.strings.ResultStrings
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -40,6 +43,10 @@ fun ResultScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val strings = remember(appLanguage) {
+        ResultLanguage.get(appLanguage)
+    }
+
     var showPremiumDialog by remember {
         mutableStateOf(false)
     }
@@ -47,51 +54,57 @@ fun ResultScreen(
     val score = extractSection(
         result,
         "RELATIONSHIP_SCORE"
-    ).ifBlank { "0" }
+    ).ifBlank {
+        "0"
+    }
 
     val toxicity = extractSection(
         result,
         "TOXICITY_LEVEL"
-    ).ifBlank { "Belirsiz" }
+    ).ifBlank {
+        strings.unknown
+    }
 
     val emotion = extractSection(
         result,
         "EMOTIONAL_TONE"
-    ).ifBlank { "Belirlenemedi." }
+    ).ifBlank {
+        strings.emotionFallback
+    }
 
     val intent = extractSection(
         result,
         "HIDDEN_INTENT"
     ).ifBlank {
-        "Belirgin bir gizli niyet tespit edilemedi."
+        strings.intentFallback
     }
 
     val greenFlags = extractSection(
         result,
         "GREEN_FLAGS"
     ).ifBlank {
-        "Belirgin olumlu işaret yok."
+        strings.greenFlagsFallback
     }
 
     val redFlags = extractSection(
         result,
         "RED_FLAGS"
     ).ifBlank {
-        "Belirgin kırmızı bayrak yok."
+        strings.redFlagsFallback
     }
 
     val summary = extractSection(
         result,
         "SUMMARY"
     ).ifBlank {
-        "Özet çıkarılamadı."
+        strings.summaryFallback
     }
 
     val suggestedReply = extractSection(
         result,
         "SUGGESTED_REPLY"
     ).ifBlank {
-        "Cevap önerisi oluşturulamadı."
+        strings.suggestedReplyFallback
     }
 
     val createPdfLauncher = rememberLauncherForActivityResult(
@@ -111,10 +124,10 @@ fun ResultScreen(
 
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    if (success) {
-                        "PDF report saved successfully."
+                    message = if (success) {
+                        strings.pdfSavedSuccessfully
                     } else {
-                        "PDF report could not be created."
+                        strings.pdfCreationFailed
                     }
                 )
             }
@@ -123,7 +136,9 @@ fun ResultScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(snackbarHostState)
+            SnackbarHost(
+                hostState = snackbarHostState
+            )
         },
         containerColor = Color(0xFFF7F7FB)
     ) { padding ->
@@ -132,31 +147,45 @@ fun ResultScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(Color(0xFFF7F7FB))
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp)
+                .verticalScroll(
+                    rememberScrollState()
+                )
+                .padding(
+                    horizontal = 20.dp,
+                    vertical = 16.dp
+                )
         ) {
             TextButton(
-                onClick = onBack
+                onClick = onBack,
+                contentPadding = PaddingValues(
+                    horizontal = 0.dp,
+                    vertical = 4.dp
+                )
             ) {
                 Text(
-                    text = "← Back",
-                    color = Color(0xFF6F50B5)
+                    text = strings.back,
+                    color = Color(0xFF6F50B5),
+                    fontWeight = FontWeight.SemiBold
                 )
             }
 
             Spacer(
-                modifier = Modifier.height(10.dp)
+                modifier = Modifier.height(8.dp)
             )
 
             Text(
-                text = "🧠 Analysis Complete",
+                text = strings.analysisComplete,
                 color = Color(0xFF151525),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.headlineMedium
             )
 
+            Spacer(
+                modifier = Modifier.height(4.dp)
+            )
+
             Text(
-                text = "Conversation analyzed successfully.",
+                text = strings.analysisCompleteDescription,
                 color = Color(0xFF666A7A),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -167,14 +196,17 @@ fun ResultScreen(
 
             ScoreCard(
                 scoreText = score,
-                conversationType = conversationType
+                conversationType = conversationType,
+                scoreLabel = strings.score
             )
 
             Spacer(
                 modifier = Modifier.height(14.dp)
             )
 
-            Button(
+            PdfExportButton(
+                isPremiumUser = isPremiumUser,
+                strings = strings,
                 onClick = {
                     if (isPremiumUser) {
                         val date = SimpleDateFormat(
@@ -188,67 +220,60 @@ fun ResultScreen(
                     } else {
                         showPremiumDialog = true
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF151A35)
-                )
-            ) {
-                Text(
-                    text = if (isPremiumUser) {
-                        "📄 Export PDF"
-                    } else {
-                        "🔒 Export PDF — Premium"
-                    }
-                )
-            }
+                }
+            )
 
             Spacer(
                 modifier = Modifier.height(14.dp)
             )
 
             ToxicityCard(
-                toxicity = toxicity
+                toxicity = toxicity,
+                strings = strings
             )
 
             ResultCard(
-                title = "😊 Emotional Tone",
+                title = strings.emotionalTone,
                 content = emotion,
                 containerColor = Color.White
             )
 
             ResultCard(
-                title = "🧠 Hidden Intent",
-                content = cleanIntent(intent),
+                title = strings.hiddenIntent,
+                content = cleanIntent(
+                    text = intent,
+                    fallback = strings.intentFallback
+                ),
                 containerColor = Color.White
             )
 
             ResultCard(
-                title = "💚 Green Flags",
+                title = strings.greenFlags,
                 content = formatFlags(
-                    greenFlags,
-                    "✅"
+                    text = greenFlags,
+                    icon = "✅"
                 ),
                 containerColor = Color(0xFFEFFBF4)
             )
 
             ResultCard(
-                title = "🚩 Red Flags",
+                title = strings.redFlags,
                 content = formatFlags(
-                    redFlags,
-                    "⚠️"
+                    text = redFlags,
+                    icon = "⚠️"
                 ),
                 containerColor = Color(0xFFFFF1F3)
             )
 
             ResultCard(
-                title = "📝 Summary",
+                title = strings.summary,
                 content = summary,
                 containerColor = Color.White
             )
 
             SuggestedReplyCard(
                 reply = suggestedReply,
+                strings = strings,
                 onCopy = {
                     val clipboard = context.getSystemService(
                         Context.CLIPBOARD_SERVICE
@@ -256,42 +281,50 @@ fun ResultScreen(
 
                     clipboard.setPrimaryClip(
                         ClipData.newPlainText(
-                            "Suggested Reply",
+                            strings.suggestedReply,
                             suggestedReply
                         )
                     )
 
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            "Reply copied"
+                            strings.replyCopied
                         )
                     }
                 }
             )
 
             Spacer(
-                modifier = Modifier.height(18.dp)
+                modifier = Modifier.height(6.dp)
             )
 
-            Text(
-                text = "ℹ️ This AI analysis is based only on the screenshots you provided. It should be treated as a helpful suggestion, not a factual judgment.",
-                color = Color(0xFF777A88),
-                style = MaterialTheme.typography.bodySmall
+            DisclaimerCard(
+                text = strings.disclaimer
             )
 
             Spacer(
-                modifier = Modifier.height(24.dp)
+                modifier = Modifier.height(22.dp)
             )
 
             Button(
                 onClick = onBack,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF6F50B5)
                 )
             ) {
-                Text("Back to Analysis")
+                Text(
+                    text = strings.backToAnalysis,
+                    fontWeight = FontWeight.Bold
+                )
             }
+
+            Spacer(
+                modifier = Modifier.height(18.dp)
+            )
         }
     }
 
@@ -301,11 +334,14 @@ fun ResultScreen(
                 showPremiumDialog = false
             },
             title = {
-                Text("📄 Premium PDF Export")
+                Text(
+                    text = strings.premiumPdfTitle,
+                    fontWeight = FontWeight.Bold
+                )
             },
             text = {
                 Text(
-                    "PDF export and corporate branding are available with Read Between Premium."
+                    text = strings.premiumPdfDescription
                 )
             },
             confirmButton = {
@@ -315,7 +351,11 @@ fun ResultScreen(
                         onUpgradeClick()
                     }
                 ) {
-                    Text("Upgrade")
+                    Text(
+                        text = strings.upgrade,
+                        color = Color(0xFF6F50B5),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
@@ -324,7 +364,9 @@ fun ResultScreen(
                         showPremiumDialog = false
                     }
                 ) {
-                    Text("Cancel")
+                    Text(
+                        text = strings.cancel
+                    )
                 }
             }
         )
@@ -334,12 +376,18 @@ fun ResultScreen(
 @Composable
 fun ScoreCard(
     scoreText: String,
-    conversationType: String
+    conversationType: String,
+    scoreLabel: String
 ) {
     val score = scoreText
-        .filter { it.isDigit() }
+        .filter {
+            it.isDigit()
+        }
         .toIntOrNull()
-        ?.coerceIn(0, 100)
+        ?.coerceIn(
+            minimumValue = 0,
+            maximumValue = 100
+        )
         ?: 0
 
     val progress = score / 100f
@@ -349,25 +397,39 @@ fun ScoreCard(
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF151A35)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 5.dp
         )
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "${conversationType.trim()} Score",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge
-            )
+            Surface(
+                color = Color(0xFF292F50),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text(
+                    text = conversationType.trim(),
+                    modifier = Modifier.padding(
+                        horizontal = 16.dp,
+                        vertical = 7.dp
+                    ),
+                    color = Color(0xFFE9CBFF),
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
 
             Spacer(
                 modifier = Modifier.height(18.dp)
             )
 
             Text(
-                text = "$score",
+                text = score.toString(),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.displayLarge
@@ -380,18 +442,18 @@ fun ScoreCard(
             )
 
             Spacer(
-                modifier = Modifier.height(14.dp)
+                modifier = Modifier.height(8.dp)
             )
 
             Text(
-                text = conversationType,
+                text = scoreLabel,
                 color = Color(0xFFE56BFF),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
 
             Spacer(
-                modifier = Modifier.height(16.dp)
+                modifier = Modifier.height(18.dp)
             )
 
             LinearProgressIndicator(
@@ -412,47 +474,72 @@ fun ScoreCard(
 }
 
 @Composable
+fun PdfExportButton(
+    isPremiumUser: Boolean,
+    strings: ResultStrings,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isPremiumUser) {
+                Color(0xFF151A35)
+            } else {
+                Color(0xFF373B54)
+            }
+        )
+    ) {
+        Text(
+            text = if (isPremiumUser) {
+                strings.exportPdf
+            } else {
+                strings.exportPdfPremium
+            },
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
 fun ToxicityCard(
-    toxicity: String
+    toxicity: String,
+    strings: ResultStrings
 ) {
     val clean = toxicity.trim()
 
-    val badgeColor = when {
-        clean.contains(
-            "yüksek",
-            ignoreCase = true
-        ) -> Color(0xFFFFD6DC)
-
-        clean.contains(
-            "orta",
-            ignoreCase = true
-        ) -> Color(0xFFFFF0C2)
-
-        clean.contains(
-            "düşük",
-            ignoreCase = true
-        ) -> Color(0xFFDFF8EA)
-
-        else -> Color(0xFFEDEDF5)
+    val toxicityLevel = when {
+        isHighToxicity(clean) -> ToxicityLevel.HIGH
+        isMediumToxicity(clean) -> ToxicityLevel.MEDIUM
+        isLowToxicity(clean) -> ToxicityLevel.LOW
+        else -> ToxicityLevel.UNKNOWN
     }
 
-    val badgeText = when {
-        clean.contains(
-            "yüksek",
-            ignoreCase = true
-        ) -> "🔴 YÜKSEK"
+    val badgeColor = when (toxicityLevel) {
+        ToxicityLevel.HIGH -> Color(0xFFFFD6DC)
+        ToxicityLevel.MEDIUM -> Color(0xFFFFF0C2)
+        ToxicityLevel.LOW -> Color(0xFFDFF8EA)
+        ToxicityLevel.UNKNOWN -> Color(0xFFEDEDF5)
+    }
 
-        clean.contains(
-            "orta",
-            ignoreCase = true
-        ) -> "🟡 ORTA"
+    val badgeTextColor = when (toxicityLevel) {
+        ToxicityLevel.HIGH -> Color(0xFFA12442)
+        ToxicityLevel.MEDIUM -> Color(0xFF826100)
+        ToxicityLevel.LOW -> Color(0xFF167247)
+        ToxicityLevel.UNKNOWN -> Color(0xFF555568)
+    }
 
-        clean.contains(
-            "düşük",
-            ignoreCase = true
-        ) -> "🟢 DÜŞÜK"
-
-        else -> clean.uppercase()
+    val badgeText = when (toxicityLevel) {
+        ToxicityLevel.HIGH -> "● ${strings.toxicityHigh}"
+        ToxicityLevel.MEDIUM -> "● ${strings.toxicityMedium}"
+        ToxicityLevel.LOW -> "● ${strings.toxicityLow}"
+        ToxicityLevel.UNKNOWN -> clean.ifBlank {
+            strings.unknown
+        }.uppercase()
     }
 
     Card(
@@ -462,20 +549,23 @@ fun ToxicityCard(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
         )
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "☣ Toxicity Level",
+                text = strings.toxicityLevel,
                 color = Color(0xFF151525),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(
-                modifier = Modifier.height(12.dp)
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
             )
 
             Surface(
@@ -485,11 +575,12 @@ fun ToxicityCard(
                 Text(
                     text = badgeText,
                     modifier = Modifier.padding(
-                        horizontal = 16.dp,
+                        horizontal = 15.dp,
                         vertical = 8.dp
                     ),
-                    color = Color(0xFF202030),
-                    fontWeight = FontWeight.Bold
+                    color = badgeTextColor,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }
@@ -509,6 +600,9 @@ fun ResultCard(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
             containerColor = containerColor
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
         )
     ) {
         Column(
@@ -522,7 +616,7 @@ fun ResultCard(
             )
 
             Spacer(
-                modifier = Modifier.height(8.dp)
+                modifier = Modifier.height(10.dp)
             )
 
             Text(
@@ -537,6 +631,7 @@ fun ResultCard(
 @Composable
 fun SuggestedReplyCard(
     reply: String,
+    strings: ResultStrings,
     onCopy: () -> Unit
 ) {
     Card(
@@ -546,27 +641,39 @@ fun SuggestedReplyCard(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFEFEFFF)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
         )
     ) {
         Column(
             modifier = Modifier.padding(18.dp)
         ) {
             Text(
-                text = "💬 Suggested Reply",
+                text = strings.suggestedReply,
                 color = Color(0xFF151525),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
 
             Spacer(
-                modifier = Modifier.height(10.dp)
+                modifier = Modifier.height(12.dp)
             )
 
-            Text(
-                text = reply,
-                color = Color(0xFF303040),
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(
+                    alpha = 0.72f
+                ),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Text(
+                    text = reply,
+                    modifier = Modifier.padding(16.dp),
+                    color = Color(0xFF303040),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
 
             Spacer(
                 modifier = Modifier.height(14.dp)
@@ -574,15 +681,85 @@ fun SuggestedReplyCard(
 
             Button(
                 onClick = onCopy,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF6F50B5)
                 )
             ) {
-                Text("📋 Copy Reply")
+                Text(
+                    text = strings.copyReply,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
+}
+
+@Composable
+fun DisclaimerCard(
+    text: String
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xFFEFEFF5),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(16.dp),
+            color = Color(0xFF686B79),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+private enum class ToxicityLevel {
+    HIGH,
+    MEDIUM,
+    LOW,
+    UNKNOWN
+}
+
+private fun isHighToxicity(
+    text: String
+): Boolean {
+    return text.contains(
+        "yüksek",
+        ignoreCase = true
+    ) || text.contains(
+        "high",
+        ignoreCase = true
+    )
+}
+
+private fun isMediumToxicity(
+    text: String
+): Boolean {
+    return text.contains(
+        "orta",
+        ignoreCase = true
+    ) || text.contains(
+        "medium",
+        ignoreCase = true
+    ) || text.contains(
+        "moderate",
+        ignoreCase = true
+    )
+}
+
+private fun isLowToxicity(
+    text: String
+): Boolean {
+    return text.contains(
+        "düşük",
+        ignoreCase = true
+    ) || text.contains(
+        "low",
+        ignoreCase = true
+    )
 }
 
 fun extractSection(
@@ -649,35 +826,34 @@ fun formatFlags(
                 .removePrefix("*")
                 .removePrefix("-")
                 .removePrefix("•")
+                .removePrefix("✅")
+                .removePrefix("⚠️")
                 .trim()
 
-            if (
-                cleanLine.contains(
-                    "yok",
-                    ignoreCase = true
-                ) ||
-                !cleanLine.contains(
-                    "belirgin",
-                    ignoreCase = true
-                )
-            ) {
-                "$icon $cleanLine"
-            } else {
-                cleanLine
-            }
+            "$icon $cleanLine"
         }
 }
 
 fun cleanIntent(
-    text: String
+    text: String,
+    fallback: String
 ): String {
+    val unclearExpressions = listOf(
+        "net değil",
+        "belirsiz",
+        "not clear",
+        "unclear"
+    )
+
     return if (
-        text.contains(
-            "net değil",
-            ignoreCase = true
-        )
+        unclearExpressions.any { expression ->
+            text.contains(
+                expression,
+                ignoreCase = true
+            )
+        }
     ) {
-        "Belirgin bir gizli niyet tespit edilemedi."
+        fallback
     } else {
         text
     }

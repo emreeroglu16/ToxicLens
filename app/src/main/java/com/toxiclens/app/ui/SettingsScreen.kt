@@ -12,10 +12,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.toxiclens.app.strings.SettingsLanguage
 
 @Composable
 fun SettingsScreen(
@@ -30,7 +32,9 @@ fun SettingsScreen(
     onAboutClick: () -> Unit,
     onBack: () -> Unit
 ) {
-    val isTurkish = appLanguage == "tr"
+    val strings = remember(appLanguage) {
+        SettingsLanguage.get(appLanguage)
+    }
 
     Column(
         modifier = Modifier
@@ -41,7 +45,7 @@ fun SettingsScreen(
     ) {
         TextButton(onClick = onBack) {
             Text(
-                text = if (isTurkish) "← Geri" else "← Back",
+                text = "← ${strings.back}",
                 color = Color(0xFF6F50B5)
             )
         }
@@ -49,11 +53,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = if (isTurkish) {
-                "⚙️ Ayarlar"
-            } else {
-                "⚙️ Settings"
-            },
+            text = strings.title,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF151525)
@@ -62,67 +62,47 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = if (isTurkish) {
-                "Uygulama tercihlerini ve hesap özelliklerini yönetin."
-            } else {
-                "Manage your application preferences and account features."
-            },
+            text = strings.description,
             color = Color(0xFF666A7A)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         SettingsSectionTitle(
-            text = if (isTurkish) "Tercihler" else "Preferences"
+            text = strings.preferences
         )
 
         SettingsItemCard(
             icon = "🌐",
-            title = if (isTurkish) "Dil" else "Language",
-            description = if (isTurkish) {
-                if (appLanguage == "tr") "Türkçe" else "İngilizce"
+            title = strings.language,
+            description = if (appLanguage == "tr") {
+                strings.turkish
             } else {
-                if (appLanguage == "tr") "Turkish" else "English"
+                strings.english
             },
             onClick = onLanguageClick
         )
 
         SettingsItemCard(
             icon = "📄",
-            title = if (isTurkish) {
-                "PDF Marka Ayarları"
-            } else {
-                "PDF Branding"
-            },
-            description = if (isTurkish) {
-                "Logo ve firma bilgilerini düzenleyin."
-            } else {
-                "Edit your logo and company information."
-            },
+            title = strings.pdfBranding,
+            description = strings.pdfBrandingDescription,
             onClick = onPdfBrandingClick
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         SettingsSectionTitle(
-            text = if (isTurkish) "Hesap" else "Account"
+            text = strings.account
         )
 
         SettingsItemCard(
             icon = "⭐",
             title = "Read Between Premium",
             description = if (isPremium) {
-                if (isTurkish) {
-                    "Premium üyeliğiniz aktif."
-                } else {
-                    "Your Premium membership is active."
-                }
+                strings.premiumActive
             } else {
-                if (isTurkish) {
-                    "Premium özelliklerin kilidini açın."
-                } else {
-                    "Unlock Premium features."
-                }
+                strings.premiumInactive
             },
             onClick = onPremiumClick
         )
@@ -130,62 +110,34 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         SettingsSectionTitle(
-            text = if (isTurkish) "Destek ve Yasal" else "Support & Legal"
+            text = strings.supportAndLegal
         )
 
         SettingsItemCard(
             icon = "📜",
-            title = if (isTurkish) {
-                "Gizlilik Politikası"
-            } else {
-                "Privacy Policy"
-            },
-            description = if (isTurkish) {
-                "Verilerinizin nasıl işlendiğini görüntüleyin."
-            } else {
-                "See how your data is handled."
-            },
+            title = strings.privacyPolicy,
+            description = strings.privacyPolicyDescription,
             onClick = onPrivacyClick
         )
 
         SettingsItemCard(
             icon = "📧",
-            title = if (isTurkish) {
-                "Bize Ulaşın"
-            } else {
-                "Contact Us"
-            },
-            description = if (isTurkish) {
-                "Destek veya geri bildirim gönderin."
-            } else {
-                "Send support requests or feedback."
-            },
+            title = strings.contactUs,
+            description = strings.contactUsDescription,
             onClick = onContactClick
         )
 
         SettingsItemCard(
             icon = "⭐",
-            title = if (isTurkish) {
-                "Uygulamayı Değerlendir"
-            } else {
-                "Rate App"
-            },
-            description = if (isTurkish) {
-                "Read Between'i Google Play'de değerlendirin."
-            } else {
-                "Rate Read Between on Google Play."
-            },
+            title = strings.rateApp,
+            description = strings.rateAppDescription,
             onClick = onRateAppClick
         )
 
         SettingsItemCard(
             icon = "ℹ️",
-            title = if (isTurkish) "Hakkında" else "About",
-            description = if (isTurkish) {
-                "Sürüm ve uygulama bilgileri."
-            } else {
-                "Version and application information."
-            },
+            title = strings.about,
+            description = strings.aboutDescription,
             onClick = onAboutClick
         )
 

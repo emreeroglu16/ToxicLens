@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
 
                     "home" -> {
                         HomeScreen(
+                            appLanguage = appLanguage,
                             onAnalyzeClick = {
                                 currentScreen = "analyze"
                             },
@@ -138,6 +139,7 @@ class MainActivity : ComponentActivity() {
 
                     "analyze" -> {
                         AnalyzeScreen(
+                            appLanguage = appLanguage,
                             isPremiumUser = effectivePremium,
                             onBack = {
                                 currentScreen = "home"
@@ -152,6 +154,7 @@ class MainActivity : ComponentActivity() {
                     "conversationType" -> {
                         ConversationTypeScreen(
                             imageUris = selectedImageUris,
+                            appLanguage = appLanguage,
                             onBack = {
                                 currentScreen = "analyze"
                             },
@@ -189,6 +192,7 @@ class MainActivity : ComponentActivity() {
 
                     "history" -> {
                         HistoryScreen(
+                            appLanguage = appLanguage,
                             isPremiumUser = effectivePremium,
                             onUpgradeClick = {
                                 currentScreen = "premium"
@@ -206,6 +210,7 @@ class MainActivity : ComponentActivity() {
 
                     "premium" -> {
                         PremiumScreen(
+                            appLanguage = appLanguage,
                             isPremium = effectivePremium,
                             onMonthlyClick = {
                                 billingManager.launchPurchase(

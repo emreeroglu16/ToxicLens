@@ -24,14 +24,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.toxiclens.app.strings.HomeLanguage
+import com.toxiclens.app.strings.HomeStrings
 
 @Composable
 fun HomeScreen(
+    appLanguage: String,
     onAnalyzeClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onPremiumClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
+    val strings = remember(appLanguage) {
+        HomeLanguage.get(appLanguage)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -59,24 +66,21 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Column {
                     Text(
-                        text = "Welcome 👋",
+                        text = strings.welcome,
                         color = Color(0xFFC9CCE8),
                         style = MaterialTheme.typography.titleMedium
                     )
 
                     Text(
-                        text = "Let's understand conversations.",
+                        text = strings.welcomeDescription,
                         color = Color(0xFF8F94BD),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
-                IconButton(
-                    onClick = onSettingsClick
-                ) {
+                IconButton(onClick = onSettingsClick) {
                     Text(
                         text = "⚙",
                         fontSize = 28.sp,
@@ -103,7 +107,7 @@ fun HomeScreen(
             Spacer(Modifier.height(10.dp))
 
             Text(
-                text = "Understand what words really mean.",
+                text = strings.slogan,
                 color = Color(0xFFC9CCE8),
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
@@ -114,41 +118,41 @@ fun HomeScreen(
             FeatureCard(
                 onClick = onAnalyzeClick,
                 icon = "▣",
-                title = "Analyze Screenshot",
-                badge = "AI Powered",
-                description = "Analyze WhatsApp, Instagram, SMS or Messenger screenshots.",
+                title = strings.analyzeTitle,
+                badge = strings.analyzeBadge,
+                description = strings.analyzeDescription,
                 accentColor = Color(0xFFE56BFF)
             )
 
             FeatureCard(
                 icon = "☰",
-                title = "Paste Conversation",
-                badge = "Fast",
-                description = "Paste copied messages and let AI analyze the communication.",
+                title = strings.pasteTitle,
+                badge = strings.pasteBadge,
+                description = strings.pasteDescription,
                 accentColor = Color(0xFF2F8CFF)
             )
 
             FeatureCard(
                 onClick = onHistoryClick,
                 icon = "◷",
-                title = "Previous Analyses",
-                badge = "Saved",
-                description = "View your saved analysis reports and history.",
+                title = strings.historyTitle,
+                badge = strings.historyBadge,
+                description = strings.historyDescription,
                 accentColor = Color(0xFF37D67A)
             )
 
             FeatureCard(
                 onClick = onPremiumClick,
                 icon = "⭐",
-                title = "Read Between Premium",
-                badge = "Upgrade",
-                description = "Unlock 20 screenshots, unlimited history, PDF export and more.",
+                title = strings.premiumTitle,
+                badge = strings.premiumBadge,
+                description = strings.premiumDescription,
                 accentColor = Color(0xFFFFC857)
             )
 
             Spacer(Modifier.height(16.dp))
 
-            PrivacyCard()
+            PrivacyCard(strings = strings)
 
             Spacer(Modifier.height(30.dp))
 
@@ -200,6 +204,7 @@ fun FeatureCard(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.98f else 1f,
         label = "cardScale"
@@ -217,7 +222,10 @@ fun FeatureCard(
                 onClick()
             },
         shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
+        border = BorderStroke(
+            1.dp,
+            accentColor.copy(alpha = 0.35f)
+        ),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF151A35)
         )
@@ -289,7 +297,10 @@ fun BadgePill(
                 color.copy(alpha = 0.16f),
                 RoundedCornerShape(50.dp)
             )
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(
+                horizontal = 10.dp,
+                vertical = 4.dp
+            )
     ) {
         Text(
             text = text,
@@ -312,7 +323,10 @@ fun SmallCard(
     Card(
         modifier = modifier.height(138.dp),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.30f)),
+        border = BorderStroke(
+            1.dp,
+            accentColor.copy(alpha = 0.30f)
+        ),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF151A35)
         )
@@ -357,11 +371,16 @@ fun SmallCard(
 }
 
 @Composable
-fun PrivacyCard() {
+fun PrivacyCard(
+    strings: HomeStrings
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Color(0xFF9B5CFF).copy(alpha = 0.30f)),
+        border = BorderStroke(
+            1.dp,
+            Color(0xFF9B5CFF).copy(alpha = 0.30f)
+        ),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF11162D)
         )
@@ -391,7 +410,7 @@ fun PrivacyCard() {
 
             Column {
                 Text(
-                    text = "Your privacy is our priority",
+                    text = strings.privacyTitle,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
@@ -399,7 +418,7 @@ fun PrivacyCard() {
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = "Your conversations are never stored or shared without your permission.",
+                    text = strings.privacyDescription,
                     color = Color(0xFFC9CCE8),
                     style = MaterialTheme.typography.bodySmall
                 )

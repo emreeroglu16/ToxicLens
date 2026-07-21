@@ -15,10 +15,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.toxiclens.app.data.HistoryStore
+import com.toxiclens.app.strings.HistoryLanguage
+import com.toxiclens.app.strings.HistoryStrings
 import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryScreen(
+    appLanguage: String,
     isPremiumUser: Boolean,
     onUpgradeClick: () -> Unit,
     onBack: () -> Unit,
@@ -27,6 +30,10 @@ fun HistoryScreen(
     val context = LocalContext.current
     val historyStore = remember { HistoryStore(context) }
     val scope = rememberCoroutineScope()
+
+    val strings = remember(appLanguage) {
+        HistoryLanguage.get(appLanguage)
+    }
 
     var historyItems by remember {
         mutableStateOf<List<String>>(emptyList())
@@ -45,8 +52,13 @@ fun HistoryScreen(
     }
 
     val sortedItems = historyItems.sortedByDescending { item ->
-        extractHistoryValue(item, "FAVORITE")
-            .equals("true", ignoreCase = true)
+        extractHistoryValue(
+            text = item,
+            key = "FAVORITE"
+        ).equals(
+            other = "true",
+            ignoreCase = true
+        )
     }
 
     val visibleItems = if (isPremiumUser) {
@@ -56,20 +68,59 @@ fun HistoryScreen(
     }
 
     val filteredItems = visibleItems.filter { item ->
-        val type = extractHistoryValue(item, "TYPE")
-        val date = extractHistoryValue(item, "DATE")
-        val result = extractHistoryValue(item, "RESULT").ifBlank { item }
+        val type = extractHistoryValue(
+            text = item,
+            key = "TYPE"
+        )
 
-        val score = extractSection(result, "RELATIONSHIP_SCORE")
-        val toxicity = extractSection(result, "TOXICITY_LEVEL")
-        val summary = extractSection(result, "SUMMARY")
+        val date = extractHistoryValue(
+            text = item,
+            key = "DATE"
+        )
+
+        val result = extractHistoryValue(
+            text = item,
+            key = "RESULT"
+        ).ifBlank {
+            item
+        }
+
+        val score = extractSection(
+            result,
+            "RELATIONSHIP_SCORE"
+        )
+
+        val toxicity = extractSection(
+            result,
+            "TOXICITY_LEVEL"
+        )
+
+        val summary = extractSection(
+            result,
+            "SUMMARY"
+        )
 
         searchText.isBlank() ||
-                type.contains(searchText, ignoreCase = true) ||
-                date.contains(searchText, ignoreCase = true) ||
-                score.contains(searchText, ignoreCase = true) ||
-                toxicity.contains(searchText, ignoreCase = true) ||
-                summary.contains(searchText, ignoreCase = true)
+                type.contains(
+                    other = searchText,
+                    ignoreCase = true
+                ) ||
+                date.contains(
+                    other = searchText,
+                    ignoreCase = true
+                ) ||
+                score.contains(
+                    other = searchText,
+                    ignoreCase = true
+                ) ||
+                toxicity.contains(
+                    other = searchText,
+                    ignoreCase = true
+                ) ||
+                summary.contains(
+                    other = searchText,
+                    ignoreCase = true
+                )
     }
 
     Column(
@@ -79,31 +130,48 @@ fun HistoryScreen(
             .verticalScroll(rememberScrollState())
             .padding(20.dp)
     ) {
-        TextButton(onClick = onBack) {
-            Text("← Back")
+        TextButton(
+            onClick = onBack
+        ) {
+            Text(
+                text = "← ${strings.back}",
+                color = Color(0xFF6F50B5)
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "📜 Analysis History",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+        Spacer(
+            modifier = Modifier.height(12.dp)
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = strings.title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF151525)
+        )
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
 
         Text(
             text = if (isPremiumUser) {
-                "${historyItems.size} saved analyses"
+                strings.savedAnalyses(
+                    historyItems.size
+                )
             } else {
-                "${visibleItems.size} of ${historyItems.size} analyses shown"
+                strings.shownAnalyses(
+                    visibleItems.size,
+                    historyItems.size
+                )
             },
-            color = Color.Gray
+            color = Color(0xFF666A7A)
         )
 
         if (!isPremiumUser && historyItems.size > 5) {
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(
+                modifier = Modifier.height(14.dp)
+            )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -116,42 +184,60 @@ fun HistoryScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "🔒 Free history limit reached",
-                        fontWeight = FontWeight.Bold
+                        text = strings.freeLimitTitle,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF151525)
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(
+                        modifier = Modifier.height(6.dp)
+                    )
 
-                    Text("Free users can view the latest 5 analyses.")
+                    Text(
+                        text = strings.freeLimitDescription,
+                        color = Color(0xFF665A32)
+                    )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
 
                     Button(
                         onClick = onUpgradeClick,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Upgrade to Premium")
+                        Text(
+                            text = strings.upgradeToPremium
+                        )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(
+            modifier = Modifier.height(18.dp)
+        )
 
         OutlinedTextField(
             value = searchText,
-            onValueChange = {
-                searchText = it
+            onValueChange = { newValue ->
+                searchText = newValue
             },
             modifier = Modifier.fillMaxWidth(),
             label = {
-                Text("Search history")
+                Text(
+                    text = strings.searchLabel
+                )
             },
             placeholder = {
-                Text("Family, Boss, date, toxicity...")
+                Text(
+                    text = strings.searchPlaceholder
+                )
             },
             leadingIcon = {
-                Text("🔍")
+                Text(
+                    text = "🔍"
+                )
             },
             trailingIcon = {
                 if (searchText.isNotBlank()) {
@@ -160,7 +246,9 @@ fun HistoryScreen(
                             searchText = ""
                         }
                     ) {
-                        Text("✕")
+                        Text(
+                            text = "✕"
+                        )
                     }
                 }
             },
@@ -168,38 +256,55 @@ fun HistoryScreen(
             shape = RoundedCornerShape(18.dp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(
+            modifier = Modifier.height(20.dp)
+        )
 
         when {
             visibleItems.isEmpty() -> {
                 EmptyHistoryCard(
-                    title = "No analysis yet.",
-                    description = "Your completed analyses will appear here."
+                    title = strings.noAnalysisTitle,
+                    description = strings.noAnalysisDescription
                 )
             }
 
             filteredItems.isEmpty() -> {
                 EmptyHistoryCard(
-                    title = "No matching analysis.",
-                    description = "Try a different search term."
+                    title = strings.noMatchingTitle,
+                    description = strings.noMatchingDescription
                 )
             }
 
             else -> {
                 filteredItems.forEachIndexed { index, item ->
-                    val type = extractHistoryValue(item, "TYPE")
-                        .ifBlank { "❤️ Relationship" }
+                    val type = extractHistoryValue(
+                        text = item,
+                        key = "TYPE"
+                    ).ifBlank {
+                        "❤️ Relationship"
+                    }
 
-                    val date = extractHistoryValue(item, "DATE")
-                        .ifBlank { "-" }
+                    val date = extractHistoryValue(
+                        text = item,
+                        key = "DATE"
+                    ).ifBlank {
+                        "-"
+                    }
 
-                    val result = extractHistoryValue(item, "RESULT")
-                        .ifBlank { item }
+                    val result = extractHistoryValue(
+                        text = item,
+                        key = "RESULT"
+                    ).ifBlank {
+                        item
+                    }
 
                     val isFavorite = extractHistoryValue(
-                        item,
-                        "FAVORITE"
-                    ).equals("true", ignoreCase = true)
+                        text = item,
+                        key = "FAVORITE"
+                    ).equals(
+                        other = "true",
+                        ignoreCase = true
+                    )
 
                     HistoryItemCard(
                         index = index + 1,
@@ -207,14 +312,19 @@ fun HistoryScreen(
                         date = date,
                         result = result,
                         isFavorite = isFavorite,
+                        strings = strings,
                         onClick = {
-                            onItemClick(result, type)
+                            onItemClick(
+                                result,
+                                type
+                            )
                         },
                         onFavoriteClick = {
                             if (isPremiumUser) {
                                 scope.launch {
                                     historyStore.toggleFavorite(item)
-                                    historyItems = historyStore.getHistory()
+                                    historyItems =
+                                        historyStore.getHistory()
                                 }
                             } else {
                                 showPremiumDialog = true
@@ -223,17 +333,22 @@ fun HistoryScreen(
                         onDelete = {
                             scope.launch {
                                 historyStore.deleteAnalysis(item)
-                                historyItems = historyStore.getHistory()
+                                historyItems =
+                                    historyStore.getHistory()
                             }
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
     }
 
     if (showPremiumDialog) {
@@ -242,10 +357,14 @@ fun HistoryScreen(
                 showPremiumDialog = false
             },
             title = {
-                Text("⭐ Premium Feature")
+                Text(
+                    text = strings.premiumFeatureTitle
+                )
             },
             text = {
-                Text("Favorites is available with Read Between Premium.")
+                Text(
+                    text = strings.favoritesPremiumDescription
+                )
             },
             confirmButton = {
                 TextButton(
@@ -254,7 +373,9 @@ fun HistoryScreen(
                         onUpgradeClick()
                     }
                 ) {
-                    Text("Upgrade")
+                    Text(
+                        text = strings.upgrade
+                    )
                 }
             },
             dismissButton = {
@@ -263,7 +384,9 @@ fun HistoryScreen(
                         showPremiumDialog = false
                     }
                 ) {
-                    Text("Cancel")
+                    Text(
+                        text = strings.cancel
+                    )
                 }
             }
         )
@@ -283,18 +406,38 @@ fun EmptyHistoryCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 24.dp,
+                    vertical = 28.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = title,
-                fontWeight = FontWeight.Bold
+                text = "📭",
+                style = MaterialTheme.typography.headlineLarge
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color(0xFF151525)
+            )
+
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
 
             Text(
                 text = description,
-                color = Color.Gray
+                color = Color(0xFF666A7A),
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
@@ -307,6 +450,7 @@ fun HistoryItemCard(
     date: String,
     result: String,
     isFavorite: Boolean,
+    strings: HistoryStrings,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onDelete: () -> Unit
@@ -318,17 +462,23 @@ fun HistoryItemCard(
     val score = extractSection(
         result,
         "RELATIONSHIP_SCORE"
-    ).ifBlank { "0" }
+    ).ifBlank {
+        "0"
+    }
 
     val toxicity = extractSection(
         result,
         "TOXICITY_LEVEL"
-    ).ifBlank { "Belirsiz" }
+    ).ifBlank {
+        strings.unknown
+    }
 
     val summary = extractSection(
         result,
         "SUMMARY"
-    ).ifBlank { "Özet yok." }
+    ).ifBlank {
+        strings.noSummary
+    }
 
     Card(
         modifier = Modifier
@@ -339,6 +489,9 @@ fun HistoryItemCard(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
         )
     ) {
         Column(
@@ -349,9 +502,10 @@ fun HistoryItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Analysis #$index",
+                    text = strings.analysisNumber(index),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFF151525),
                     modifier = Modifier.weight(1f)
                 )
 
@@ -359,7 +513,11 @@ fun HistoryItemCard(
                     onClick = onFavoriteClick
                 ) {
                     Text(
-                        text = if (isFavorite) "★" else "☆",
+                        text = if (isFavorite) {
+                            "★"
+                        } else {
+                            "☆"
+                        },
                         color = Color(0xFFFFB300),
                         style = MaterialTheme.typography.headlineSmall
                     )
@@ -369,32 +527,67 @@ fun HistoryItemCard(
             Text(
                 text = conversationType,
                 color = Color(0xFF6F50B5),
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(
+                modifier = Modifier.height(5.dp)
+            )
 
             Text(
                 text = "🕒 $date",
-                color = Color.Gray,
+                color = Color(0xFF777B8A),
                 style = MaterialTheme.typography.bodySmall
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "⭐ Score: $score / 100",
-                color = Color(0xFF151525)
+            Spacer(
+                modifier = Modifier.height(12.dp)
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Surface(
+                    color = Color(0xFFF0EBFF),
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text(
+                        text = "⭐ ${strings.score}: $score / 100",
+                        color = Color(0xFF4E3687),
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = 7.dp
+                        )
+                    )
+                }
 
-            Text(
-                text = "☣ Toxicity: $toxicity",
-                color = Color(0xFF151525)
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
+
+                Surface(
+                    color = Color(0xFFFFEEF1),
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text(
+                        text = "☣ ${strings.toxicity}: $toxicity",
+                        color = Color(0xFF9B344B),
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = 7.dp
+                        )
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.height(14.dp)
             )
-
-            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = summary,
@@ -402,7 +595,9 @@ fun HistoryItemCard(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
 
             TextButton(
                 onClick = {
@@ -410,7 +605,7 @@ fun HistoryItemCard(
                 }
             ) {
                 Text(
-                    text = "🗑 Delete",
+                    text = strings.delete,
                     color = Color(0xFFFF5C7A)
                 )
             }
@@ -423,10 +618,14 @@ fun HistoryItemCard(
                 showDeleteDialog = false
             },
             title = {
-                Text("Delete Analysis")
+                Text(
+                    text = strings.deleteAnalysisTitle
+                )
             },
             text = {
-                Text("Are you sure you want to delete this analysis?")
+                Text(
+                    text = strings.deleteAnalysisDescription
+                )
             },
             confirmButton = {
                 TextButton(
@@ -436,7 +635,7 @@ fun HistoryItemCard(
                     }
                 ) {
                     Text(
-                        text = "Delete",
+                        text = strings.delete,
                         color = Color(0xFFFF5C7A)
                     )
                 }
@@ -447,7 +646,9 @@ fun HistoryItemCard(
                         showDeleteDialog = false
                     }
                 ) {
-                    Text("Cancel")
+                    Text(
+                        text = strings.cancel
+                    )
                 }
             }
         )
@@ -466,11 +667,17 @@ fun extractHistoryValue(
     }
 
     val contentStart = startIndex + startTag.length
-    val nextIndex = text.indexOf("###", contentStart)
+    val nextIndex = text.indexOf(
+        "###",
+        contentStart
+    )
 
     return if (nextIndex == -1) {
         text.substring(contentStart).trim()
     } else {
-        text.substring(contentStart, nextIndex).trim()
+        text.substring(
+            contentStart,
+            nextIndex
+        ).trim()
     }
 }

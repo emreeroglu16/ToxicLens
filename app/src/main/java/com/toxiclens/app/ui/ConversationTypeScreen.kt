@@ -18,11 +18,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.toxiclens.app.ai.GeminiService
+import com.toxiclens.app.strings.ConversationTypeLanguage
+import com.toxiclens.app.strings.ConversationTypeStrings
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private data class ConversationTypeOption(
+    val value: String,
+    val emoji: String,
+    val label: (ConversationTypeStrings) -> String
+)
 
 @Composable
 fun ConversationTypeScreen(
     imageUris: List<Uri>,
+    appLanguage: String,
     onAnalysisComplete: (String, String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -30,26 +41,78 @@ fun ConversationTypeScreen(
     val scope = rememberCoroutineScope()
     val geminiService = remember { GeminiService() }
 
-    val types = listOf(
-        "❤️ Relationship",
-        "👥 Friend",
-        "👨‍👩‍👧 Family",
-        "💼 Boss",
-        "👔 Coworker",
-        "🛒 Customer",
-        "📱 Other"
-    )
+    val strings = remember(appLanguage) {
+        ConversationTypeLanguage.get(appLanguage)
+    }
 
-    var selected by remember { mutableStateOf("") }
-    var isAnalyzing by remember { mutableStateOf(false) }
+    val types = remember {
+        listOf(
+            ConversationTypeOption(
+                value = "❤️ Relationship",
+                emoji = "❤️",
+                label = { it.relationship }
+            ),
+            ConversationTypeOption(
+                value = "👥 Friend",
+                emoji = "👥",
+                label = { it.friend }
+            ),
+            ConversationTypeOption(
+                value = "👨‍👩‍👧 Family",
+                emoji = "👨‍👩‍👧",
+                label = { it.family }
+            ),
+            ConversationTypeOption(
+                value = "💼 Boss",
+                emoji = "💼",
+                label = { it.boss }
+            ),
+            ConversationTypeOption(
+                value = "👔 Coworker",
+                emoji = "👔",
+                label = { it.coworker }
+            ),
+            ConversationTypeOption(
+                value = "🛒 Customer",
+                emoji = "🛒",
+                label = { it.customer }
+            ),
+            ConversationTypeOption(
+                value = "📱 Other",
+                emoji = "📱",
+                label = { it.other }
+            )
+        )
+    }
 
-    fun uriToBitmap(uri: Uri): Bitmap {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val source = ImageDecoder.createSource(context.contentResolver, uri)
-            ImageDecoder.decodeBitmap(source)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+    var selectedType by remember {
+        mutableStateOf<ConversationTypeOption?>(null)
+    }
+
+    var isAnalyzing by remember {
+        mutableStateOf(false)
+    }
+
+    var errorMessage by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    suspend fun uriToBitmap(uri: Uri): Bitmap {
+        return withContext(Dispatchers.IO) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val source = ImageDecoder.createSource(
+                    context.contentResolver,
+                    uri
+                )
+
+                ImageDecoder.decodeBitmap(source)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Media.getBitmap(
+                    context.contentResolver,
+                    uri
+                )
+            }
         }
     }
 
@@ -63,14 +126,17 @@ fun ConversationTypeScreen(
                 .fillMaxSize()
                 .padding(20.dp)
         ) {
-            TextButton(onClick = onBack) {
-                Text("← Back")
+            TextButton(
+                onClick = onBack,
+                enabled = !isAnalyzing
+            ) {
+                Text("← ${strings.back}")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Who is this conversation with?",
+                text = strings.title,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -78,24 +144,29 @@ fun ConversationTypeScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Select one option before starting the analysis.",
+                text = strings.description,
                 color = Color.Gray
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             types.forEach { type ->
-                val isSelected = selected == type
+                val isSelected = selectedType?.value == type.value
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp)
-                        .clickable {
-                            selected = type
+                        .clickable(enabled = !isAnalyzing) {
+                            selectedType = type
+                            errorMessage = null
                         },
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) Color(0xFFE9D8FD) else Color.White
+                        containerColor = if (isSelected) {
+                            Color(0xFFE9D8FD)
+                        } else {
+                            Color.White
+                        }
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {
@@ -106,7 +177,7 @@ fun ConversationTypeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = type,
+                            text = "${type.emoji} ${type.label(strings)}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -114,31 +185,55 @@ fun ConversationTypeScreen(
                 }
             }
 
+            errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             Button(
                 onClick = {
+                    val selected = selectedType ?: return@Button
+
                     scope.launch {
                         isAnalyzing = true
+                        errorMessage = null
 
-                        val bitmaps = imageUris.map { uri ->
-                            uriToBitmap(uri)
+                        try {
+                            val bitmaps = imageUris.map { uri ->
+                                uriToBitmap(uri)
+                            }
+
+                            val result = geminiService.analyze(
+                                bitmaps = bitmaps,
+                                conversationType = selected.value,
+                                appLanguage = appLanguage
+                            )
+
+                            onAnalysisComplete(
+                                result,
+                                selected.value
+                            )
+                        } catch (exception: Exception) {
+                            errorMessage = exception.localizedMessage
+                                ?: strings.analysisError
+                        } finally {
+                            isAnalyzing = false
                         }
-
-                        val result = geminiService.analyze(
-                            bitmaps = bitmaps,
-                            conversationType = selected
-                        )
-
-                        isAnalyzing = false
-
-                        onAnalysisComplete(result, selected)
                     }
                 },
-                enabled = selected.isNotEmpty() && !isAnalyzing,
+                enabled = selectedType != null &&
+                        !isAnalyzing &&
+                        imageUris.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Analyze Conversation")
+                Text(strings.analyzeConversation)
             }
         }
 
@@ -167,7 +262,7 @@ fun ConversationTypeScreen(
                         Spacer(modifier = Modifier.height(20.dp))
 
                         Text(
-                            text = "Analiz ediliyor...",
+                            text = strings.analyzing,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium
@@ -176,7 +271,7 @@ fun ConversationTypeScreen(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Gemini seçilen kategoriye göre inceliyor.",
+                            text = strings.geminiAnalyzing,
                             color = Color(0xFFC9CCE8),
                             style = MaterialTheme.typography.bodyMedium
                         )
