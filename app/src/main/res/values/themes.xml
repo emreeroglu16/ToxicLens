@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ToxicLens" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.ToxicLens" parent="Theme.SplashScreen">
+
+        <item name="windowSplashScreenBackground">#101638</item>
+
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+
+        <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
+
+    </style>
+
 </resources>

@@ -15,10 +15,13 @@ import com.toxiclens.app.data.PdfBranding
 import com.toxiclens.app.data.PdfBrandingStore
 import com.toxiclens.app.ui.*
 import kotlinx.coroutines.launch
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -57,9 +60,7 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(PdfBranding())
                 }
 
-                // Geçici Premium testi.
-                // Google Play yayını öncesinde false yapılacak.
-                val forcePremiumForTesting = true
+                val forcePremiumForTesting = false
                 val effectivePremium =
                     forcePremiumForTesting || isPremium
 
