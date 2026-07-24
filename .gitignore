@@ -13,3 +13,14 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Release outputs
+*.aab
+*.apk
+
+# Android signing keys
+*.jks
+*.keystore
+
+# Generated logs
+*.log
