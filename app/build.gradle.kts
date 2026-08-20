@@ -55,7 +55,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
-    implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-ai")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("com.android.billingclient:billing-ktx:9.1.0")
