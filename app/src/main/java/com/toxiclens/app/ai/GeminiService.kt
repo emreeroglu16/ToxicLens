@@ -1,5 +1,6 @@
 package com.toxiclens.app.ai
 
+import android.util.Log
 import android.graphics.Bitmap
 import com.google.firebase.ai.FirebaseAI
 import com.google.firebase.ai.type.GenerativeBackend
@@ -10,7 +11,7 @@ class GeminiService {
     private val model = FirebaseAI.getInstance(
         backend = GenerativeBackend.googleAI()
     ).generativeModel(
-        modelName = "gemini-2.5-flash"
+        modelName = "gemini-3.6-flash"
     )
 
     suspend fun analyze(
@@ -40,9 +41,14 @@ class GeminiService {
                 ?: AiPrompts.emptyResultMessage(appLanguage)
 
         } catch (exception: Exception) {
-            exception.localizedMessage
-                ?.takeIf { it.isNotBlank() }
-                ?: AiPrompts.errorMessage(appLanguage)
+
+            Log.e(
+                "GeminiService",
+                "AI analysis failed",
+                exception
+            )
+
+            AiPrompts.errorMessage(appLanguage)
         }
     }
 }
